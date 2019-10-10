@@ -13,6 +13,14 @@ import (
 const (
 	EntropyAvail = "/proc/sys/kernel/random/entropy_avail"
 	PoolSize 	 = "/proc/sys/kernel/random/poolsize"
+
+	MasterKey = "salktrwy5duqhbnc3zcpx6mtgyx738ec"
+	Base1PIN  = "m8h8bde5hpzsvksc4aljspl5dlu2sxbv"
+	Base2PIN  = "txk37aqp7l4wjj8j63t7jqm9cdxzjhcu"
+	
+	KeyPath   = "/var/data/key"
+	Base1Path = "/var/data/pin1"
+	Base2Path = "/var/data/pin2" 
 )
 
 func main() {
