@@ -93,6 +93,9 @@ func LoadKeys() (Keys) {
 	if runtime.GOOS == "darwin" {
 		extB1 = fmt.Sprintf("%s/%s", "/Volumes/BASE1", ExtBase1Path)
 		extB2 = fmt.Sprintf("%s/%s", "/Volumes/BASE2", ExtBase2Path)
+	} else if runtime.GOOS == "linux" {
+		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", ExtBase1Path)
+		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", ExtBase2Path)
 	}
 
 	paths := []string{
