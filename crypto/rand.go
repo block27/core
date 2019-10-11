@@ -13,6 +13,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -59,6 +60,9 @@ func (r *devReader) Read(b []byte) (n int, err error) {
 		t := time.AfterFunc(60*time.Second, warnBlocked)
 		defer t.Stop()
 	}
+
+	fmt.Println("r.name: ", r.name)
+	fmt.Println("module: ", Module)
 
 	if altGetRandom != nil && r.name == Module && altGetRandom(b) {
 		return len(b), nil
