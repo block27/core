@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/hex"
+	// "encoding/hex"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -12,26 +12,15 @@ import (
 )
 
 const (
-
-	// Public presentable keys
 	HostMasterKeyPath 	= "/var/data/key"
+	HostMasterIvPath 		= "/var/data/iv"
+	HostPin1						= "/var/data/pin1"
+	HostPin2 						= "/var/data/pin2"
 	HostSerialPath 			= "/var/data/serial"
+
 	ExtBase1Path   			= "var/data/pin"
 	ExtBase2Path   			= "var/data/pin"
-
-	// Private hidden keys
-	PrivateMasterKeyPath = "/private/etc/key"
-	PrivateBase1Path		 = "/private/etc/pin1"
-	PrivateBase2Path 		 = "/private/etc/pin2"
-
 )
-
-type Keys struct {
-	MasterKey string
-	Pin1 string
-	Pin2 string
-	Serial string
-}
 
 // for string to struct implementations
 var TypeRegistry = make(map[string]reflect.Type)
@@ -44,7 +33,6 @@ type Backend interface {
 type BackendConfiguration struct {
 	Config ConfigReader
 	Logger *logrus.Logger
-	Keys
 }
 
 func NewClient() *BackendConfiguration {
@@ -56,38 +44,33 @@ func NewClient() *BackendConfiguration {
 	return &BackendConfiguration{
 		Config: c,
 		Logger: LoadLogger(c),
-		Keys: LoadKeys(),
 	}
 }
 
 func main() {
-	c := NewClient()
+	// c := NewClient()
 
-	e, _  := crypto.AvailableEntropy()
+	LoadKeys()
+	//
+	// e, _  := crypto.AvailableEntropy()
+	//
+	// c.Logger.Infof("Runtime: %s", runtime.GOOS)
+	// c.Logger.Infof("Entropy: %d", e)
 
-	c.Logger.Infof("Runtime: %s\n", runtime.GOOS)
-	c.Logger.Infof("Entropy: %d\n", e)
-
-	c.Logger.Infof("Serial: %s\n", c.Keys.Serial)
-	c.Logger.Infof("MasterKey: %s\n", c.Keys.MasterKey)
-	c.Logger.Infof("Pin1: %s\n", c.Keys.Pin1)
-	c.Logger.Infof("Pin2: %s\n", c.Keys.Pin2)
-
-	r,_ := crypto.GenerateRandomBytes(128)
-
-	fmt.Println("BYTES:")
-	fmt.Printf("%s\n", hex.Dump(r))
-
-	fmt.Println("HEX:")
-	fmt.Printf("%s\n", hex.EncodeToString(r))
-
-	f := crypto.GenerateRandomFile(4096)
-	fmt.Println("Generating random File: ", f)
+	// r,_ := crypto.GenerateRandomBytes(128)
+	//
+	// fmt.Println("")
+	// fmt.Println("BYTES:")
+	// fmt.Printf("%s\n", hex.Dump(r))
+	//
+	// fmt.Println("HEX:")
+	// fmt.Printf("%s\n", hex.EncodeToString(r))
+	//
+	// f := crypto.GenerateRandomFile(4096)
+	// fmt.Println("Generating random File: ", f)
 }
 
-func LoadKeys() (Keys) {
-	var keys Keys
-
+func LoadKeys() {
 	var extB1, extB2 string
 
 	if runtime.GOOS == "darwin" {
@@ -99,11 +82,11 @@ func LoadKeys() (Keys) {
 	}
 
 	paths := []string{
-		HostSerialPath,
 		HostMasterKeyPath,
-		PrivateMasterKeyPath,
-		PrivateBase1Path,
-		PrivateBase2Path,
+		HostMasterIvPath,
+		HostPin1,
+		HostPin2,
+		HostSerialPath,
 		extB1,
 		extB2,
 	}
@@ -115,25 +98,47 @@ func LoadKeys() (Keys) {
 		}
 	}
 
-	keys.Serial = helpers.ReadContents(HostSerialPath)
+	// Initialize new crypter struct. Errors are ignored.
+	crypter, _ := crypto.NewCrypter(
+		[]byte(helpers.ReadFile(HostMasterKeyPath)),
+		[]byte(helpers.ReadFile(HostMasterIvPath)),
+	)
 
-	// Create MasterKey from Host/Private
-	masterHost := helpers.ReadContents(HostMasterKeyPath)
-	masterPrivate := helpers.ReadContents(PrivateMasterKeyPath)
 
-	keys.MasterKey = fmt.Sprintf("%s%s", masterHost, masterPrivate)
+	fmt.Println("PIN1 path: ", extB1)
+	ePin1 := helpers.ReadBinary(extB1)
+	fmt.Printf("pin1 e: %v\n", ePin1)
+	dPin1, _ := crypter.Decrypt(ePin1)
+  fmt.Printf("pin1 d: %v\n", dPin1)
 
-	// Create Pin1Key from Host/Private
-	pin1Host := helpers.ReadContents(extB1)
-	pin1Private := helpers.ReadContents(PrivateBase1Path)
 
-	keys.Pin1 = fmt.Sprintf("%s%s", pin1Host, pin1Private)
+	hPin1 := helpers.ReadFile(HostPin1)
+	hPin2 := helpers.ReadFile(HostPin2)
 
-	// Create Pin2Key from Host/Private
-	pin2Host := helpers.ReadContents(extB2)
-	pin2Private := helpers.ReadContents(PrivateBase2Path)
+	fmt.Println("PIN1: ", hPin1)
+	fmt.Println("PIN2: ", hPin2)
 
-	keys.Pin2 = fmt.Sprintf("%s%s", pin2Host, pin2Private)
+	// if hPin1 != string(dPin1) {
+	// 	fmt.Printf("pin1 is not valid\n")
+	// }
 
-	return keys
+	//
+	// // Create MasterKey from Host/Private
+	// masterHost := helpers.ReadContents(HostMasterKeyPath)
+	// masterPrivate := helpers.ReadContents(PrivateMasterKeyPath)
+	//
+	// keys.MasterKey = fmt.Sprintf("%s%s", masterHost, masterPrivate)
+	//
+	// // Create Pin1Key from Host/Private
+	// pin1Host := helpers.ReadContents(extB1)
+	// pin1Private := helpers.ReadContents(PrivateBase1Path)
+	//
+	// keys.Pin1 = fmt.Sprintf("%s%s", pin1Host, pin1Private)
+	//
+	// // Create Pin2Key from Host/Private
+	// pin2Host := helpers.ReadContents(extB2)
+	// pin2Private := helpers.ReadContents(PrivateBase2Path)
+	//
+	// keys.Pin2 = fmt.Sprintf("%s%s", pin2Host, pin2Private)
+
 }

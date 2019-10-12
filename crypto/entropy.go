@@ -48,9 +48,9 @@ func AvailableEntropy() (int, error) {
 func GenerateRandomBytes(size int) ([]byte, error) {
 	b := make([]byte, size)
 
-	if _, err := Reader.Read(b); err != nil {
-		panic(err)
-	}
+	// if _, err := Reader.Read(b); err != nil {
+	// 	panic(err)
+	// }
 
 	return b, nil
 }
