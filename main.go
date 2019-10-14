@@ -2,6 +2,7 @@ package main
 
 import (
 	// "encoding/hex"
+	// "encoding/base64"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -14,9 +15,10 @@ import (
 const (
 	HostMasterKeyPath 	= "/var/data/key"
 	HostMasterIvPath 		= "/var/data/iv"
+	HostSerialPath 			= "/var/data/serial"
+
 	HostPin1						= "/var/data/pin1"
 	HostPin2 						= "/var/data/pin2"
-	HostSerialPath 			= "/var/data/serial"
 
 	ExtBase1Path   			= "var/data/pin"
 	ExtBase2Path   			= "var/data/pin"
@@ -98,47 +100,19 @@ func LoadKeys() {
 		}
 	}
 
-	// Initialize new crypter struct. Errors are ignored.
-	crypter, _ := crypto.NewCrypter(
+	// Start encryption/decryption process
+	c, _ := crypto.NewCrypter(
 		[]byte(helpers.ReadFile(HostMasterKeyPath)),
 		[]byte(helpers.ReadFile(HostMasterIvPath)),
 	)
 
+	d1, _ := c.Decrypt([]byte(helpers.ReadFile(extB1)))
+	if string(d1) != helpers.ReadFile(HostPin1) {
+		panic("Pin1 does not match, invalid ext authentication!")
+	}
 
-	fmt.Println("PIN1 path: ", extB1)
-	ePin1 := helpers.ReadBinary(extB1)
-	fmt.Printf("pin1 e: %v\n", ePin1)
-	dPin1, _ := crypter.Decrypt(ePin1)
-  fmt.Printf("pin1 d: %v\n", dPin1)
-
-
-	hPin1 := helpers.ReadFile(HostPin1)
-	hPin2 := helpers.ReadFile(HostPin2)
-
-	fmt.Println("PIN1: ", hPin1)
-	fmt.Println("PIN2: ", hPin2)
-
-	// if hPin1 != string(dPin1) {
-	// 	fmt.Printf("pin1 is not valid\n")
-	// }
-
-	//
-	// // Create MasterKey from Host/Private
-	// masterHost := helpers.ReadContents(HostMasterKeyPath)
-	// masterPrivate := helpers.ReadContents(PrivateMasterKeyPath)
-	//
-	// keys.MasterKey = fmt.Sprintf("%s%s", masterHost, masterPrivate)
-	//
-	// // Create Pin1Key from Host/Private
-	// pin1Host := helpers.ReadContents(extB1)
-	// pin1Private := helpers.ReadContents(PrivateBase1Path)
-	//
-	// keys.Pin1 = fmt.Sprintf("%s%s", pin1Host, pin1Private)
-	//
-	// // Create Pin2Key from Host/Private
-	// pin2Host := helpers.ReadContents(extB2)
-	// pin2Private := helpers.ReadContents(PrivateBase2Path)
-	//
-	// keys.Pin2 = fmt.Sprintf("%s%s", pin2Host, pin2Private)
-
+	d2, _ := c.Decrypt([]byte(helpers.ReadFile(extB2)))
+	if string(d2) != helpers.ReadFile(HostPin2) {
+		panic("Pin2 does not match, invalid ext authentication!")
+	}
 }

@@ -1,6 +1,10 @@
 package crypto
 
 import (
+  "crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+
   "github.com/spacemonkeygo/openssl"
 )
 
@@ -8,6 +12,30 @@ type Crypter struct {
   key    []byte
   iv     []byte
   cipher *openssl.Cipher
+}
+
+// DigestFunc are functions to create a key from the passphrase
+type DigestFunc func([]byte) []byte
+
+// DigestMD5Sum uses the (deprecated) pre-OpenSSL 1.1.0c MD5 digest to create the key
+func DigestMD5Sum(data []byte) []byte {
+	h := md5.New()
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// DigestSHA1Sum uses SHA1 digest to create the key
+func DigestSHA1Sum(data []byte) []byte {
+	h := sha1.New()
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// DigestSHA256Sum uses SHA256 digest to create the key which is the default behaviour since OpenSSL 1.1.0c
+func DigestSHA256Sum(data []byte) []byte {
+	h := sha256.New()
+	h.Write(data)
+	return h.Sum(nil)
 }
 
 func NewCrypter(key []byte, iv []byte) (*Crypter, error) {
