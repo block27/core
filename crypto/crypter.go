@@ -8,6 +8,11 @@ import (
   "github.com/spacemonkeygo/openssl"
 )
 
+type AESCredentials struct {
+  Key    []byte
+  Iv     []byte
+}
+
 type Crypter struct {
   key    []byte
   iv     []byte
