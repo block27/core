@@ -1,6 +1,7 @@
 package crypto
 
 import (
+  "errors"
   "crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -9,8 +10,8 @@ import (
 )
 
 type AESCredentials struct {
-  Key    []byte
-  Iv     []byte
+  key    []byte
+  iv     []byte
 }
 
 type Crypter struct {
@@ -50,6 +51,26 @@ func NewCrypter(key []byte, iv []byte) (*Crypter, error) {
   }
 
   return &Crypter{key, iv, cipher}, nil
+}
+
+func NewAESCredentials(key []byte, iv []byte) (*AESCredentials, error)  {
+  if len(string(key)) != 32  {
+    return nil, errors.New("Key is of invalid length / required 32 bytes")
+  }
+
+  if len(string(iv)) != 16  {
+    return nil, errors.New("Iv is of invalid length / required 16 bytes")
+  }
+
+  return &AESCredentials{key, iv}, nil
+}
+
+func (c *AESCredentials) Key() ([]byte) {
+  return c.key
+}
+
+func (c *AESCredentials) Iv() ([]byte) {
+  return c.iv
 }
 
 func (c *Crypter) Encrypt(input []byte) ([]byte, error) {

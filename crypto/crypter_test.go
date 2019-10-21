@@ -5,9 +5,15 @@ import (
 	"testing"
 )
 
+var credentials *AESCredentials
 var crypter *Crypter
 
 func init() {
+	credentials, _ = NewAESCredentials(
+		[]byte("vghghvytgm69rr47shz42qt4br2uqpbq"),
+		[]byte("wvu5dkxun3zyg448"),
+	)
+
 	crypter, _ = NewCrypter(
 		[]byte("hn8adjw4t6aa9fe57h4jku6p6mf8c2pw"),
 		[]byte("q5nb45yf83cna97z"),
@@ -28,6 +34,18 @@ func TestDigestSHA1Sum(t *testing.T) {
 
 func TestDigestSHA256Sum(t *testing.T) {
 	if hex.EncodeToString(DigestSHA256Sum([]byte("hello"))) != "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824" {
+		t.Fail()
+	}
+}
+
+func TestKey(t *testing.T) {
+	if string(credentials.Key()) != "vghghvytgm69rr47shz42qt4br2uqpbq" {
+		t.Fail()
+	}
+}
+
+func TestIv(t *testing.T) {
+	if string(credentials.Iv()) != "wvu5dkxun3zyg448" {
 		t.Fail()
 	}
 }

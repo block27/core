@@ -109,7 +109,8 @@ func (b *BackendConfiguration) USBFPGAHardwareKeys() (*crypto.AESCredentials) {
 		panic(err)
   }
 
-	bky := make([]byte, 32)
+	bkS := 32
+	bky := make([]byte, bkS)
   ky, err = s.Read(bky)
   if err != nil {
   	panic(err)
@@ -120,20 +121,36 @@ func (b *BackendConfiguration) USBFPGAHardwareKeys() (*crypto.AESCredentials) {
 		panic(err)
 	}
 
-	biv := make([]byte, 16)
+	biS := 16
+	biv := make([]byte, biS)
 	iv, err = s.Read(biv)
 	if err != nil {
 		panic(err)
 	}
 
-	var kyS, ivS string
-	kyS = string(bky[:ky])
-	ivS = string(biv[:iv])
+	kyS := string(bky[:ky])
+	ivS := string(biv[:iv])
 
-	fmt.Printf("ky(%d): %s\n", len(kyS), kyS)
-	fmt.Printf("iv(%d): %s\n", len(ivS), ivS)
+	kSz := len(kyS)
+	iSz := len(ivS)
 
-	return &crypto.AESCredentials{Key: bky[:ky], Iv: biv[:iv]}
+	if kSz != bkS {
+		panic("Key size did not match, cannot read serial values")
+	}
+
+	if iSz != biS {
+		panic("Iv size did not match, cannot read serial values")
+	}
+
+	fmt.Printf("ky(%d) OK\n", kSz)
+	fmt.Printf("iv(%d) OK\n", iSz)
+
+	aes, err := crypto.NewAESCredentials(bky[:ky], biv[:iv])
+	if err != nil {
+		panic(err)
+	}
+
+	return aes
 }
 
 // ValidateKeys ...
@@ -167,24 +184,26 @@ func (b *BackendConfiguration) ValidateKeys() {
 
 	// Check all paths, ensure every one exists
 	for _, v :=  range paths {
-		if !helpers.FileExists(HostMasterKeyPath) {
+		if !helpers.FileExists(v) {
 			panic(fmt.Errorf("Missing [%s]", v))
 		}
 	}
 
+	// Pull the Key/Iv off the hardware device
 	aes := b.USBFPGAHardwareKeys()
 
 	hmK := helpers.ReadFile(HostMasterKeyPath)
 	hmI := helpers.ReadFile(HostMasterIvPath)
 
-	if string(aes.Key) != hmK {
+	if string(aes.Key()) != hmK {
 		panic("Key does not match Hardware(key)")
 	}
 
-	if string(aes.Iv) != hmI {
+	if string(aes.Iv()) != hmI {
 		panic("Iv does not match Hardware(iv)")
 	}
 
+	// Create a cypter service object - encryption/decryption
 	c, _ := crypto.NewCrypter(
 		[]byte(hmK),
 		[]byte(hmI),
