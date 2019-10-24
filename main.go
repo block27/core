@@ -4,11 +4,10 @@ import (
 	// "encoding/hex"
 	// "encoding/base64"
 	"fmt"
-	"reflect"
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/tarm/serial"
+	"github.com/tarm/serial"  // github.com/jacobsa/go-serial/serial
 
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
@@ -28,15 +27,12 @@ const (
 	Configuration 			= "/var/data/config"
 )
 
-// for string to struct implementations
-var TypeRegistry = make(map[string]reflect.Type)
-
 type BackendConfiguration struct {
 	Config ConfigReader
 	Logger *logrus.Logger
 }
 
-func NewClient() *BackendConfiguration {
+func NewClient() (*BackendConfiguration, error) {
 	c, err := LoadConfig(ConfigDefaults)
 	if err != nil {
 		panic(err)
@@ -50,34 +46,15 @@ func NewClient() *BackendConfiguration {
 	// Call welcome notification message on start
 	bc.Welcome()
 
-	return bc
+	return bc, nil
 }
 
 func main() {
 	// Initalize a new client, the base entrpy point to the application code
-	c := NewClient()
+	c, _ := NewClient()
 
 	// Check and ensure correct USB/serial peripherals have correct authentication
 	c.ValidateKeys()
-
-	// c.
-	//
-	// e, _  := crypto.AvailableEntropy()
-	//
-	// c.Logger.Infof("Runtime: %s", runtime.GOOS)
-	// c.Logger.Infof("Entropy: %d", e)
-
-	// r,_ := crypto.GenerateRandomBytes(128)
-	//
-	// fmt.Println("")
-	// fmt.Println("BYTES:")
-	// fmt.Printf("%s\n", hex.Dump(r))
-	//
-	// fmt.Println("HEX:")
-	// fmt.Printf("%s\n", hex.EncodeToString(r))
-	//
-	// f := crypto.GenerateRandomFile(4096)
-	// fmt.Println("Generating random File: ", f)
 }
 
 // USBFPGAHardwareKeys ...
@@ -96,13 +73,15 @@ func main() {
 // IV:
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
-func (b *BackendConfiguration) USBFPGAHardwareKeys() (*crypto.AESCredentials) {
+func (b *BackendConfiguration) SerialFPGAHardwareKeys() (*crypto.AESCredentials) {
 	c := &serial.Config{Name: "/dev/tty.usbmodem20021401", Baud: 115200}
 
 	s, err := serial.OpenPort(c)
   if err != nil {
   	panic(err)
   }
+
+	defer s.Close()
 
 	ky, err := s.Write([]byte("k.Request.byte32\r"))
   if err != nil {
@@ -170,6 +149,8 @@ func (b *BackendConfiguration) ValidateKeys() {
 	} else if runtime.GOOS == "linux" {
 		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", ExtBase1Path)
 		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", ExtBase2Path)
+	} else {
+		panic("Unsupported OS")
 	}
 
 	paths := []string{
@@ -190,10 +171,10 @@ func (b *BackendConfiguration) ValidateKeys() {
 	}
 
 	// Pull the Key/Iv off the hardware device
-	aes := b.USBFPGAHardwareKeys()
+	aes := b.SerialFPGAHardwareKeys()
 
-	hmK := helpers.ReadFile(HostMasterKeyPath)
-	hmI := helpers.ReadFile(HostMasterIvPath)
+	hmK, _ := helpers.ReadFile(HostMasterKeyPath)
+	hmI, _ := helpers.ReadFile(HostMasterIvPath)
 
 	if string(aes.Key()) != hmK {
 		panic("Key does not match Hardware(key)")
@@ -209,13 +190,20 @@ func (b *BackendConfiguration) ValidateKeys() {
 		[]byte(hmI),
 	)
 
-	d1, _ := c.Decrypt([]byte(helpers.ReadFile(extB1)))
-	if string(d1) != helpers.ReadFile(HostPin1) {
+	b1F, _  := helpers.ReadFile(extB1)
+	hp1F, _ := helpers.ReadFile(HostPin1)
+
+	d1, _ := c.Decrypt([]byte(b1F))
+	if string(d1) != hp1F {
 		panic("Pin1 does not match, invalid ext authentication!")
 	}
 
-	d2, _ := c.Decrypt([]byte(helpers.ReadFile(extB2)))
-	if string(d2) != helpers.ReadFile(HostPin2) {
+
+	b2F, _  := helpers.ReadFile(extB2)
+	hp2F, _ := helpers.ReadFile(HostPin2)
+
+	d2, _ := c.Decrypt([]byte(b2F))
+	if string(d2) != hp2F {
 		panic("Pin2 does not match, invalid ext authentication!")
 	}
 }

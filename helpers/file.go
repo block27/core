@@ -16,13 +16,13 @@ func FileExists(name string) bool {
     return true
 }
 
-func ReadFile(filename string) string {
+func ReadFile(filename string) (string, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		return "", err
   }
 
-	return string(b)
+	return string(b), nil
 }
 
 func ReadBinary(filename string) []byte {
