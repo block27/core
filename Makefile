@@ -25,5 +25,8 @@ key_iv:
 # 	@openssl aes-256-cbc -d -nosalt -K ${KEY} -iv ${IV} -in /Volumes/BASE2/var/data/pin
 # 	@echo ""
 
+run:
+	go build && ./bespin
+
 test:
 	go test ./... -cover

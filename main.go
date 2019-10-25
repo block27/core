@@ -1,46 +1,33 @@
 package main
 
 import (
-	// "encoding/hex"
-	// "encoding/base64"
 	"fmt"
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/tarm/serial"  // github.com/jacobsa/go-serial/serial
+	// "github.com/tarm/serial"
+	// github.com/jacobsa/go-serial/serial
 
+	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
-)
-
-const (
-	HostMasterKeyPath 	= "/var/data/key"
-	HostMasterIvPath 		= "/var/data/iv"
-	HostSerialPath 			= "/var/data/serial"
-
-	HostPin1						= "/var/data/pin1"
-	HostPin2 						= "/var/data/pin2"
-
-	ExtBase1Path   			= "var/data/pin"
-	ExtBase2Path   			= "var/data/pin"
-
-	Configuration 			= "/var/data/config"
+	"github.com/amanelis/bespin/services/serial"
 )
 
 type BackendConfiguration struct {
-	Config ConfigReader
+	Config config.ConfigReader
 	Logger *logrus.Logger
 }
 
 func NewClient() (*BackendConfiguration, error) {
-	c, err := LoadConfig(ConfigDefaults)
+	c, err := config.LoadConfig(config.ConfigDefaults)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var bc = &BackendConfiguration{
 		Config: c,
-		Logger: LoadLogger(c),
+		Logger: config.LoadLogger(c),
 	}
 
 	// Call welcome notification message on start
@@ -73,63 +60,38 @@ func main() {
 // IV:
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
-func (b *BackendConfiguration) SerialFPGAHardwareKeys() (*crypto.AESCredentials) {
-	c := &serial.Config{Name: "/dev/tty.usbmodem20021401", Baud: 115200}
+func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
+	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
 
-	s, err := serial.OpenPort(c)
-  if err != nil {
-  	panic(err)
-  }
+	// Request KEY
+	ky, ke := c.Request(serial.Request{
+		Method: "k.Request.byte32\r",
+		Size: 32,
+	})
 
-	defer s.Close()
+	if ke !=nil {
+		panic(ke)
+	}
 
-	ky, err := s.Write([]byte("k.Request.byte32\r"))
-  if err != nil {
-		panic(err)
-  }
+	// Request IV
+	iv, ie := c.Request(serial.Request{
+		Method: "i.Request.byte16\r",
+		Size: 16,
+	})
 
-	bkS := 32
-	bky := make([]byte, bkS)
-  ky, err = s.Read(bky)
-  if err != nil {
-  	panic(err)
-  }
+	if ie !=nil {
+		return nil, ie
+	}
 
-	iv, err := s.Write([]byte("i.Request.byte16\r"))
+	fmt.Printf("ky(%d) verified, OK\n", len(string(ky)))
+	fmt.Printf("iv(%d) verified, OK\n", len(string(iv)))
+
+	aes, err := crypto.NewAESCredentials(ky, iv)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	biS := 16
-	biv := make([]byte, biS)
-	iv, err = s.Read(biv)
-	if err != nil {
-		panic(err)
-	}
-
-	kyS := string(bky[:ky])
-	ivS := string(biv[:iv])
-
-	kSz := len(kyS)
-	iSz := len(ivS)
-
-	if kSz != bkS {
-		panic("Key size did not match, cannot read serial values")
-	}
-
-	if iSz != biS {
-		panic("Iv size did not match, cannot read serial values")
-	}
-
-	fmt.Printf("ky(%d) OK\n", kSz)
-	fmt.Printf("iv(%d) OK\n", iSz)
-
-	aes, err := crypto.NewAESCredentials(bky[:ky], biv[:iv])
-	if err != nil {
-		panic(err)
-	}
-
-	return aes
+	return aes, nil
 }
 
 // ValidateKeys ...
@@ -144,21 +106,21 @@ func (b *BackendConfiguration) ValidateKeys() {
 	var extB1, extB2 string
 
 	if runtime.GOOS == "darwin" {
-		extB1 = fmt.Sprintf("%s/%s", "/Volumes/BASE1", ExtBase1Path)
-		extB2 = fmt.Sprintf("%s/%s", "/Volumes/BASE2", ExtBase2Path)
+		extB1 = fmt.Sprintf("%s/%s", "/Volumes/BASE1", config.ExtBase1Path)
+		extB2 = fmt.Sprintf("%s/%s", "/Volumes/BASE2", config.ExtBase2Path)
 	} else if runtime.GOOS == "linux" {
-		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", ExtBase1Path)
-		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", ExtBase2Path)
+		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", config.ExtBase1Path)
+		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", config.ExtBase2Path)
 	} else {
 		panic("Unsupported OS")
 	}
 
 	paths := []string{
-		HostMasterKeyPath,
-		HostMasterIvPath,
-		HostPin1,
-		HostPin2,
-		HostSerialPath,
+		config.HostMasterKeyPath,
+		config.HostMasterIvPath,
+		config.HostPin1,
+		config.HostPin2,
+		config.HostSerialPath,
 		extB1,
 		extB2,
 	}
@@ -171,10 +133,13 @@ func (b *BackendConfiguration) ValidateKeys() {
 	}
 
 	// Pull the Key/Iv off the hardware device
-	aes := b.SerialFPGAHardwareKeys()
+	aes, err := b.RequestHardwareKeys()
+	if err !=nil {
+		panic(err)
+	}
 
-	hmK, _ := helpers.ReadFile(HostMasterKeyPath)
-	hmI, _ := helpers.ReadFile(HostMasterIvPath)
+	hmK, _ := helpers.ReadFile(config.HostMasterKeyPath)
+	hmI, _ := helpers.ReadFile(config.HostMasterIvPath)
 
 	if string(aes.Key()) != hmK {
 		panic("Key does not match Hardware(key)")
@@ -191,7 +156,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 	)
 
 	b1F, _  := helpers.ReadFile(extB1)
-	hp1F, _ := helpers.ReadFile(HostPin1)
+	hp1F, _ := helpers.ReadFile(config.HostPin1)
 
 	d1, _ := c.Decrypt([]byte(b1F))
 	if string(d1) != hp1F {
@@ -200,7 +165,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 
 
 	b2F, _  := helpers.ReadFile(extB2)
-	hp2F, _ := helpers.ReadFile(HostPin2)
+	hp2F, _ := helpers.ReadFile(config.HostPin2)
 
 	d2, _ := c.Decrypt([]byte(b2F))
 	if string(d2) != hp2F {
