@@ -25,10 +25,11 @@ const (
 	createdAt 	= "created_at"
 	updatedAt 	= "updated_at"
 
-	// Runtime specific
 	HostMasterKeyPath 	= "/var/data/key"
 	HostMasterIvPath 		= "/var/data/iv"
 	HostSerialPath 			= "/var/data/serial"
+
+	HostKeyPath 				= "/var/data/keys"
 
 	HostPin1						= "/var/data/pin1"
 	HostPin2 						= "/var/data/pin2"
@@ -51,6 +52,7 @@ type ConfigReader interface {
 	GetStringMapString(string) map[string]string
 	GetStringSlice(string) []string
 	SetDefault(string, interface{})
+	WriteConfig() error
 }
 
 // DefaultSettings is the function for configuring defaults
@@ -101,6 +103,10 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 		cFile := fmt.Sprintf("%s/%s.%s", configurationPath, configurationFile, configurationFrmt)
 		if _, err := os.Stat(cFile); os.IsNotExist(err) {
 			os.Create(cFile)
+		}
+
+		if _, err := os.Stat(HostKeyPath); os.IsNotExist(err) {
+			os.Mkdir(HostKeyPath, os.ModePerm)
 		}
 
 		// Toml config file settings

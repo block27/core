@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"runtime"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/services/keys"
 	"github.com/amanelis/bespin/services/serial"
 )
 
@@ -42,6 +44,21 @@ func main() {
 
 	// Check and ensure correct USB/serial peripherals have correct authentication
 	c.ValidateKeys()
+
+	k, er := keys.NewKey()
+	if er !=nil {
+		panic(er)
+	}
+	keys.SaveKey(c.Config, "r1", *k.Struct())
+
+	r, _ := keys.FindKey(c.Config, "r1")
+	fmt.Println("---------------------------------------------")
+	fmt.Printf("R1: %s\n", r.PrivateKeyB64)
+	fmt.Println("---------------------------------------------")
+
+	sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
+  fmt.Println(string(sDec))
+
 }
 
 // USBFPGAHardwareKeys ...
