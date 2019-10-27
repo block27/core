@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/amanelis/bespin/helpers"
@@ -16,23 +16,28 @@ import (
 
 const (
 	EntropyAvail = "/proc/sys/kernel/random/entropy_avail"
-	PoolSize 	 	 = "/proc/sys/kernel/random/poolsize"
+	PoolSize     = "/proc/sys/kernel/random/poolsize"
 )
 
 type EntropyAPI interface {
-	AvailableEntropy() (int, error)
+	EntropyAvail() (int, error)
+	PoolSize() (int, error)
 	GenerateRandomBytes(size int) ([]byte, error)
 	GenerateRandomFile(size int) (string, error)
 	Ping() (string, error)
 }
 
-type entropyAPI struct {}
+type entropyAPI struct{}
 
 func NewEntropy() EntropyAPI {
 	return &entropyAPI{}
 }
 
-func (e *entropyAPI) AvailableEntropy() (int, error) {
+func (e *entropyAPI) PoolSize() (int, error) {
+	return 0, nil
+}
+
+func (e *entropyAPI) EntropyAvail() (int, error) {
 	if runtime.GOOS != "linux" || !helpers.FileExists(EntropyAvail) {
 		return -1, fmt.Errorf("Invalid architecture for running hwrng, found system: %s", runtime.GOOS)
 	}
@@ -40,8 +45,8 @@ func (e *entropyAPI) AvailableEntropy() (int, error) {
 	cmd := exec.Command("/bin/cat", EntropyAvail)
 
 	var stdout, stderr bytes.Buffer
-  cmd.Stdout = &stdout
-  cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 	if err != nil {

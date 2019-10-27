@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"runtime"
 
@@ -45,19 +44,25 @@ func main() {
 	// Check and ensure correct USB/serial peripherals have correct authentication
 	c.ValidateKeys()
 
+	// Begin key generation and storage into flat yaml file
 	k, er := keys.NewKey()
-	if er !=nil {
+	if er != nil {
 		panic(er)
 	}
-	keys.SaveKey(c.Config, "r1", *k.Struct())
 
-	r, _ := keys.FindKey(c.Config, "r1")
-	fmt.Println("---------------------------------------------")
-	fmt.Printf("R1: %s\n", r.PrivateKeyB64)
-	fmt.Println("---------------------------------------------")
+	fmt.Printf("Key ID: %s\n", k.Struct().GID.String())
+	fmt.Printf("	privateKey: \n%s\n", k.Struct().PrivateKeyB64)
+	fmt.Printf("	publicKey: \n%s\n", k.Struct().PublicKeyB64)
 
-	sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
-  fmt.Println(string(sDec))
+	// keys.SaveKey(c.Config, "r1", *k.Struct())
+
+	// r, _ := keys.FindKey(c.Config, "r1")
+	// fmt.Println("---------------------------------------------")
+	// fmt.Printf("r1[base64 privateKey]: %s\n", r.PrivateKeyB64)
+	// fmt.Println("---------------------------------------------")
+
+	// sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
+	// fmt.Println(string(sDec))
 
 }
 
@@ -78,25 +83,25 @@ func main() {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
+	c := serial.NewSerial("/dev/tty.usbmodem2002140", 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
 		Method: "k.Request.byte32\r",
-		Size: 32,
+		Size:   32,
 	})
 
-	if ke !=nil {
+	if ke != nil {
 		panic(ke)
 	}
 
 	// Request IV
 	iv, ie := c.Request(serial.Request{
 		Method: "i.Request.byte16\r",
-		Size: 16,
+		Size:   16,
 	})
 
-	if ie !=nil {
+	if ie != nil {
 		return nil, ie
 	}
 
@@ -143,7 +148,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 	}
 
 	// Check all paths, ensure every one exists
-	for _, v :=  range paths {
+	for _, v := range paths {
 		if !helpers.FileExists(v) {
 			panic(fmt.Errorf("Missing [%s]", v))
 		}
@@ -151,7 +156,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 
 	// Pull the Key/Iv off the hardware device
 	aes, err := b.RequestHardwareKeys()
-	if err !=nil {
+	if err != nil {
 		panic(err)
 	}
 
@@ -172,7 +177,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 		[]byte(hmI),
 	)
 
-	b1F, _  := helpers.ReadFile(extB1)
+	b1F, _ := helpers.ReadFile(extB1)
 	hp1F, _ := helpers.ReadFile(config.HostPin1)
 
 	d1, _ := c.Decrypt([]byte(b1F))
@@ -180,8 +185,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 		panic("Pin1 does not match, invalid ext authentication!")
 	}
 
-
-	b2F, _  := helpers.ReadFile(extB2)
+	b2F, _ := helpers.ReadFile(extB2)
 	hp2F, _ := helpers.ReadFile(config.HostPin2)
 
 	d2, _ := c.Decrypt([]byte(b2F))
@@ -191,10 +195,10 @@ func (b *BackendConfiguration) ValidateKeys() {
 }
 
 func (b *BackendConfiguration) Welcome() {
-	fmt.Println("----------------------------------------------------------------")
-	fmt.Printf("- Compiler: %s\n", runtime.Compiler)
-	fmt.Printf("- Runtime: %s\n", runtime.GOOS)
-	fmt.Printf("- Go Arch: %s\n", runtime.GOARCH)
-	fmt.Printf("- CPUs: %d\n", runtime.NumCPU())
-	fmt.Println("----------------------------------------------------------------")
+	fmt.Printf("%s\n", helpers.Cyan("----------------------------------------------------------------"))
+	fmt.Printf("%s: %d\n", helpers.Green("- CPUs"), runtime.NumCPU())
+	fmt.Printf("%s: %s\n", helpers.Green("- Arch"), runtime.GOARCH)
+	fmt.Printf("%s: %s\n", helpers.Green("- Compiler"), runtime.Compiler)
+	fmt.Printf("%s: %s\n", helpers.Green("- Runtime"), runtime.GOOS)
+	fmt.Printf("%s\n", helpers.Cyan("----------------------------------------------------------------"))
 }

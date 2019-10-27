@@ -4,17 +4,14 @@ import (
 	// "bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"sync"
 	// "crypto/sha1"
 	"crypto/rand"
 	"crypto/x509"
 	// "encoding/binary"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"os"
-
-	"github.com/amanelis/bespin/config"
-	"github.com/mitchellh/mapstructure"
 
 	guuid "github.com/google/uuid"
 )
@@ -23,33 +20,36 @@ type KeyAPI interface {
 	Struct() *key
 }
 
+// key - struct, main type and placeholder for private keys on the system. These
+// should be persisted to a flat file database storage.
 type key struct {
-	ID string `mapstructure:"id"`
+	sink sync.Mutex // mutex to allow clean concurrent access
+	GID  guuid.UUID // guuid for crypto identification
 
-	PublicKeyPath string `mapstructure:"publicKeyPath"`
-	PrivateKeyPath string `mapstructure:"privateKeyPath"`
+	PublicKeyPath  string
+	PrivateKeyPath string
 
-	PublicKeyB64 string `mapstructure:"publicKeyB64"`
-	PrivateKeyB64	string `mapstructure:"publicKeyB64"`
+	PublicKeyB64  string
+	PrivateKeyB64 string
 }
 
-func FindKey(c config.ConfigReader, ndx string) (key, error) {
-	var k key
-
-	r := c.GetStringMap(fmt.Sprintf("keys.%s", ndx))
-	mapstructure.Decode(r, &k)
-
-	return k, nil
-}
-
-func SaveKey(c config.ConfigReader, ndx string, val key) {
-	c.SetDefault(fmt.Sprintf("keys.%s", ndx), val.Struct())
-	c.WriteConfig()
-}
+// func FindKey(c config.ConfigReader, ndx string) (key, error) {
+// 	var k key
+//
+// 	r := c.GetStringMap(fmt.Sprintf("keys.%s", ndx))
+// 	mapstructure.Decode(r, &k)
+//
+// 	return k, nil
+// }
+//
+// func SaveKey(c config.ConfigReader, ndx string, val key) {
+// 	c.SetDefault(fmt.Sprintf("keys.%s", ndx), val.Struct())
+// 	c.WriteConfig()
+// }
 
 func NewKey() (KeyAPI, error) {
 	key := &key{
-		ID: generateUUID(),
+		GID: generateUUID(),
 	}
 
 	// Create the curve
@@ -78,9 +78,8 @@ func (k *key) Struct() *key {
 	return k
 }
 
-func generateUUID() string {
-	uuid := guuid.New()
-	return uuid.String()
+func generateUUID() guuid.UUID {
+	return guuid.New()
 }
 
 func importPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
@@ -97,9 +96,9 @@ func importPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
 func exportPublicKeytoPEM(pub *ecdsa.PublicKey) []byte {
 	b, _ := x509.MarshalPKIXPublicKey(pub)
 	c := pem.Block{
-		Type: "EC PUBLIC KEY",
+		Type:    "EC PUBLIC KEY",
 		Headers: nil,
-		Bytes: b,
+		Bytes:   b,
 	}
 	d := pem.EncodeToMemory(&c)
 	//log.Print(string(d))
@@ -120,9 +119,9 @@ func importPrivateKeyfromPEM(pemsec []byte) *ecdsa.PrivateKey {
 func exportPrivateKeytoPEM(sec *ecdsa.PrivateKey) []byte {
 	l, _ := x509.MarshalECPrivateKey(sec)
 	m := pem.Block{
-		Type: "EC PRIVATE KEY",
+		Type:    "EC PRIVATE KEY",
 		Headers: nil,
-		Bytes: l,
+		Bytes:   l,
 	}
 	n := pem.EncodeToMemory(&m)
 
@@ -157,24 +156,24 @@ func exportPrivateKeytoEncryptedPEM(sec *ecdsa.PrivateKey, password []byte) []by
 }
 
 func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
-    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
 
-    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
 
-    return string(pemEncoded), string(pemEncodedPub)
+	return string(pemEncoded), string(pemEncodedPub)
 }
 
 func decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
-    block, _ := pem.Decode([]byte(pemEncoded))
-    x509Encoded := block.Bytes
-    privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
+	block, _ := pem.Decode([]byte(pemEncoded))
+	x509Encoded := block.Bytes
+	privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
 
-    blockPub, _ := pem.Decode([]byte(pemEncodedPub))
-    x509EncodedPub := blockPub.Bytes
-    genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
-    publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	blockPub, _ := pem.Decode([]byte(pemEncodedPub))
+	x509EncodedPub := blockPub.Bytes
+	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+	publicKey := genericPublicKey.(*ecdsa.PublicKey)
 
-    return privateKey, publicKey
+	return privateKey, publicKey
 }

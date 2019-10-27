@@ -10,36 +10,36 @@ import (
 )
 
 const (
-	env  = "env"
+	env = "env"
 
 	environment    = "environment"
 	environmentVar = "ENVIRONMENT"
 
-	serialNumber 		= "serial_number"
+	serialNumber    = "serial_number"
 	serialNumberVar = "SERIAL_NUMBER"
 
 	development = "development"
 	production  = "production"
-	test				= "test"
+	test        = "test"
 
-	createdAt 	= "created_at"
-	updatedAt 	= "updated_at"
+	createdAt = "created_at"
+	updatedAt = "updated_at"
 
-	HostMasterKeyPath 	= "/var/data/key"
-	HostMasterIvPath 		= "/var/data/iv"
-	HostSerialPath 			= "/var/data/serial"
+	HostMasterKeyPath = "/var/data/key"
+	HostMasterIvPath  = "/var/data/iv"
+	HostSerialPath    = "/var/data/serial"
 
-	HostKeyPath 				= "/var/data/keys"
+	hostKeyPath = "/var/data/keys"
 
-	HostPin1						= "/var/data/pin1"
-	HostPin2 						= "/var/data/pin2"
+	HostPin1 = "/var/data/pin1"
+	HostPin2 = "/var/data/pin2"
 
-	ExtBase1Path   			= "var/data/pin"
-	ExtBase2Path   			= "var/data/pin"
+	ExtBase1Path = "var/data/pin"
+	ExtBase2Path = "var/data/pin"
 
-	configurationFrmt		= "yaml"
-	configurationFile 	= "config"
-	configurationPath 	= "/var/data"
+	configurationFrmt = "yaml"
+	configurationFile = "config"
+	configurationPath = "/var/data"
 )
 
 // ConfigReader represents configuration reader
@@ -90,7 +90,6 @@ func getTimeStamp() string {
 	return time.Now().Format(time.RFC850)
 }
 
-
 // LoadConfig - returns configuration for a particular app
 func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 	config := viper.New()
@@ -105,8 +104,8 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 			os.Create(cFile)
 		}
 
-		if _, err := os.Stat(HostKeyPath); os.IsNotExist(err) {
-			os.Mkdir(HostKeyPath, os.ModePerm)
+		if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
+			os.Mkdir(hostKeyPath, os.ModePerm)
 		}
 
 		// Toml config file settings
@@ -115,7 +114,7 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 		config.AddConfigPath(configurationPath)
 
 		err := config.ReadInConfig()
-		if err !=nil {
+		if err != nil {
 			return nil, fmt.Errorf("fatal error config file: %s", err)
 		}
 
