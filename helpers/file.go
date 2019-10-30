@@ -10,13 +10,13 @@ import (
 )
 
 func FileExists(name string) bool {
-    if _, err := os.Stat(name); err != nil {
-        if os.IsNotExist(err) {
-            return false
-        }
-    }
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
 
-    return true
+	return true
 }
 
 func MD5File(filePath string) (string, error) {
@@ -53,32 +53,32 @@ func ReadFile(filename string) (string, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return "", err
-  }
+	}
 
 	return string(b), nil
 }
 
 func ReadBinary(filename string) []byte {
-    file, err := os.Open(filename)
+	file, err := os.Open(filename)
 
-    if err != nil {
-        panic(err)
-    }
-    defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
 
-    stats, statsErr := file.Stat()
-    if statsErr != nil {
-        panic(statsErr)
-    }
+	stats, statsErr := file.Stat()
+	if statsErr != nil {
+		panic(statsErr)
+	}
 
-    var size int64 = stats.Size()
-    bytes := make([]byte, size)
+	var size int64 = stats.Size()
+	bytes := make([]byte, size)
 
-    bufr := bufio.NewReader(file)
-    _,err = bufr.Read(bytes)
-		if err != nil {
-				panic(err)
-		}
+	bufr := bufio.NewReader(file)
+	_, err = bufr.Read(bytes)
+	if err != nil {
+		panic(err)
+	}
 
-    return bytes
+	return bytes
 }

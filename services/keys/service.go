@@ -1,18 +1,18 @@
 package keys
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"sync"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
@@ -22,24 +22,25 @@ import (
 
 type KeyAPI interface {
 	Struct() *key
+	Marshall() (string, error)
+	Unmarshall(string) (*key, error)
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
 type key struct {
-	sink sync.Mutex 				// mutex to allow clean concurrent access
-	GID  guuid.UUID 				`json:"gid"`	// guuid for crypto identification
+	sink sync.Mutex // mutex to allow clean concurrent access
+	GID  guuid.UUID `json:"gid"` // guuid for crypto identification
 
-	Fingerprint 	string		`json:"fingerPrint"`
+	Fingerprint string `json:"fingerPrint"`
 
-	PublicKeyPath  string		`json:"publicKeyPath"`
-	PrivateKeyPath string		`json:"privateKeyPath"`
-	PrivatePemPath string		`json:"privatePemPath"`
+	PublicKeyPath  string `json:"publicKeyPath"`
+	PrivateKeyPath string `json:"privateKeyPath"`
+	PrivatePemPath string `json:"privatePemPath"`
 
-	PublicKeyB64  string		`json:"publicKeyB64"`
-	PrivateKeyB64 string		`json:"privateKeyB64"`
+	PublicKeyB64  string `json:"publicKeyB64"`
+	PrivateKeyB64 string `json:"privateKeyB64"`
 }
-
 
 // NewECDSA - main factory method for creating the ECDSA key
 func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
@@ -49,15 +50,15 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
-	sec, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub := &sec.PublicKey
+	pri, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
-	pKey, pPub := encode(sec, pub)
+	pemKey, pemPub := encode(pri, pub)
 
-	key.PublicKeyB64 = base64.StdEncoding.EncodeToString([]byte(pPub))
-	key.PrivateKeyB64 = base64.StdEncoding.EncodeToString([]byte(pKey))
-	key.Fingerprint = fmt.Sprintf("%s:%s",
+	key.PublicKeyB64 = base64.StdEncoding.EncodeToString([]byte(pemPub))
+	key.PrivateKeyB64 = base64.StdEncoding.EncodeToString([]byte(pemKey))
+	key.Fingerprint = fmt.Sprintf("%s%s",
 		pub.X.String()[0:12],
 		pub.Y.String()[0:12],
 	)
@@ -73,22 +74,22 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	key.PrivatePemPath = fmt.Sprintf("%s/%s", kDirPath, "private.pem")
 
 	// save private and public key separately
-	privatekeyfile, err := os.Create(key.PrivateKeyPath)
+	privatekeyFile, err := os.Create(key.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	} else {
-		privatekeyencoder := gob.NewEncoder(privatekeyfile)
-		privatekeyencoder.Encode(sec)
-		privatekeyfile.Close()
+		privatekeyencoder := gob.NewEncoder(privatekeyFile)
+		privatekeyencoder.Encode(pri)
+		privatekeyFile.Close()
 	}
 
-	publickeyfile, err := os.Create(key.PublicKeyPath)
+	publickeyFile, err := os.Create(key.PublicKeyPath)
 	if err != nil {
 		return nil, err
 	} else {
-		publickeyencoder := gob.NewEncoder(publickeyfile)
+		publickeyencoder := gob.NewEncoder(publickeyFile)
 		publickeyencoder.Encode(pub)
-		publickeyfile.Close()
+		publickeyFile.Close()
 	}
 
 	// Pem for private key
@@ -98,21 +99,27 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	}
 
 	// Marshall the private key to PKCS8
-	pem509, _ := x509.MarshalPKCS8PrivateKey(sec)
-	pemkey := &pem.Block{
-		Type : "ECDSA PRIVATE KEY",
-		Bytes : pem509,
+	pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
+	if pemErr != nil {
+		return nil, pemErr
 	}
 
+	pemkey := &pem.Block{
+		Type:  "ECDSA PRIVATE KEY",
+		Bytes: pem509,
+	}
+
+	// Create pem file
 	e := pem.Encode(pemfile, pemkey)
-	if e !=nil {
+	if e != nil {
 		return nil, e
 	}
 
 	// Marshall the objects
-	obj, _ := json.Marshal(key)
-
-	fmt.Printf("OBJ: %s\n", obj)
+	obj, err := keyToGOB64(key)
+	if err != nil {
+		return nil, err
+	}
 
 	// Write data to  file
 	binFile := fmt.Sprintf("%s/%s", kDirPath, "obj.bin")
@@ -122,9 +129,9 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	}
 	defer objFile.Close()
 
-  if err := ioutil.WriteFile(binFile, obj, 0777); err != nil {
-      return nil, err
-  }
+	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
+		return nil, err
+	}
 
 	// PEM #2
 	// prpem := exportPrivateKeytoPEM(sec)
@@ -136,24 +143,24 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	return key, nil
 }
 
-// List - return all system keys
-func Get(c config.ConfigReader, fp string) (*key, error) {
+// GetECDSA - return all system keys
+func GetECDSA(c config.ConfigReader, fp string) (*key, error) {
 	kDirPath := fmt.Sprintf("%s/%s", c.GetString("keys.path"), fp)
 	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
 		return (*key)(nil), err
 	}
 
-	fmt.Printf("Checking dir for keys:  %s\n", kDirPath)
 	data, err := helpers.ReadFile(fmt.Sprintf("%s/obj.bin", kDirPath))
-	if err !=nil {
-		return (*key)(nil), nil
+	if err != nil {
+		return (*key)(nil), err
 	}
 
-	var k1 key
-	json.Unmarshal([]byte(data), &k1)
+	obj, err := keyFromGOB64(data)
+	if err != nil {
+		return (*key)(nil), err
+	}
 
-
-	return &k1, nil
+	return obj, nil
 }
 
 // Struct - return the full object for access to non exported fields
@@ -161,17 +168,33 @@ func (k *key) Struct() *key {
 	return k
 }
 
+func (k *key) Marshall() (string, error) {
+	d, err := keyToGOB64(k)
+	if err != nil {
+		return "", err
+	}
+
+	return d, nil
+}
+
+func (k *key) Unmarshall(obj string) (*key, error) {
+	d, err := keyFromGOB64(obj)
+	if err != nil {
+		return (*key)(nil), err
+	}
+
+	return d, nil
+}
+
+// generateUUID - generate and return a valid GUUID
 func generateUUID() guuid.UUID {
 	return guuid.New()
 }
 
 func importPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
 	block, _ := pem.Decode(pempub)
-	//log.Print(block)
 	pubInterface, _ := x509.ParsePKIXPublicKey(block.Bytes)
-	//log.Print(pubInterface)
 	pub := pubInterface.(*ecdsa.PublicKey)
-	//log.Print(pub)
 	return pub
 }
 
@@ -183,18 +206,14 @@ func exportPublicKeytoPEM(pub *ecdsa.PublicKey) []byte {
 		Headers: nil,
 		Bytes:   b,
 	}
-	d := pem.EncodeToMemory(&c)
-	//log.Print(string(d))
 
-	return d
+	return pem.EncodeToMemory(&c)
 }
 
 // import private key from pem format
 func importPrivateKeyfromPEM(pemsec []byte) *ecdsa.PrivateKey {
 	block, _ := pem.Decode(pemsec)
-	//log.Print(block)
 	sec, _ := x509.ParseECPrivateKey(block.Bytes)
-	//log.Print(sec)
 	return sec
 }
 
@@ -210,7 +229,6 @@ func exportPrivateKeytoPEM(sec *ecdsa.PrivateKey) []byte {
 
 	keypem, _ := os.OpenFile("sec.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	pem.Encode(keypem, &pem.Block{Type: "EC PRIVATE KEY", Bytes: l})
-	//log.Print(string(n))
 
 	return n
 }
@@ -218,10 +236,8 @@ func exportPrivateKeytoPEM(sec *ecdsa.PrivateKey) []byte {
 // import private key from pem format
 func importPrivateKeyfromEncryptedPEM(pemsec, password []byte) *ecdsa.PrivateKey {
 	block, _ := pem.Decode(pemsec)
-	//log.Print(block)
 	buf, _ := x509.DecryptPEMBlock(block, password)
 	sec, _ := x509.ParseECPrivateKey(buf)
-	//log.Print(sec)
 	return sec
 }
 
@@ -230,7 +246,6 @@ func exportPrivateKeytoEncryptedPEM(sec *ecdsa.PrivateKey, password []byte) []by
 	l, _ := x509.MarshalECPrivateKey(sec)
 	m, _ := x509.EncryptPEMBlock(rand.Reader, "EC PRIVATE KEY", l, password, x509.PEMCipherAES256)
 	n := pem.EncodeToMemory(m)
-	//log.Print(string(n))
 
 	keypem, _ := os.OpenFile("sec.Encrypted.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	pem.Encode(keypem, &pem.Block{Type: "EC PRIVATE KEY", Bytes: l})
@@ -259,4 +274,34 @@ func decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.
 	publicKey := genericPublicKey.(*ecdsa.PublicKey)
 
 	return privateKey, publicKey
+}
+
+func keyToGOB64(k *key) (string, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+
+	if err := e.Encode(k); err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
+}
+
+func keyFromGOB64(str string) (*key, error) {
+	by, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return (*key)(nil), err
+	}
+
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+
+	var k *key
+
+	if err = d.Decode(&k); err != nil {
+		fmt.Println(`failed gob Decode`, err)
+	}
+
+	return k, nil
 }

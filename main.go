@@ -16,7 +16,7 @@ import (
 
 type BackendConfiguration struct {
 	Config *config.ConfigReader
-	Db *leveldb.DB
+	LDb    *leveldb.DB
 	Logger *logrus.Logger
 }
 
@@ -28,14 +28,14 @@ func NewClient() (*BackendConfiguration, error) {
 
 	// Initalize LevelDB pointer
 	db, err := leveldb.OpenFile("/tmp/leveldb", nil)
-  if err != nil {
-	  panic(err)
-  }
+	if err != nil {
+		panic(err)
+	}
 
 	// Base BackendConfiguration to link structs and objects
 	var bc = &BackendConfiguration{
 		Config: &c,
-		Db: db,
+		LDb:    db,
 		Logger: config.LoadLogger(c),
 	}
 
@@ -50,27 +50,30 @@ func main() {
 	c, _ := NewClient()
 
 	// Defer the database connection
-	defer c.Db.Close()
+	defer c.LDb.Close()
 
 	// Check and ensure correct USB/serial peripherals have correct authentication
 	c.ValidateKeys()
 
 	// Begin key generation and storage into flat yaml file
-	// k, er := keys.NewECDSA(*c.Config)
-	// if er != nil {
-	// 	panic(er)
-	// }
+	kN, er := keys.NewECDSA(*c.Config)
+	if er != nil {
+		panic(er)
+	}
 
-	k, _ := keys.Get(*c.Config, "152516833740:133069067105")
+	kF, e := keys.GetECDSA(*c.Config, kN.Struct().Fingerprint)
+	if e != nil {
+		panic(e)
+	}
 
-	fmt.Printf("Key ID: %s\n", k.Struct().GID.String())
-	fmt.Printf("Key FP: %s\n", k.Struct().Fingerprint)
-	fmt.Printf("	privateKey: %s......\n", k.Struct().PrivateKeyB64[0:32])
-	fmt.Printf("	publicKey:  %s......\n", k.Struct().PublicKeyB64[0:32])
+	fmt.Printf("Key ID: %s\n", kF.Struct().GID.String())
+	fmt.Printf("Key FP: %s\n", kF.Struct().Fingerprint)
+	fmt.Printf("	privateKey: %s......\n", kF.Struct().PrivateKeyB64[0:32])
+	fmt.Printf("	publicKey:  %s......\n", kF.Struct().PublicKeyB64[0:32])
 
-	fmt.Printf("	privatePemPath: %s\n", k.Struct().PrivatePemPath)
-	fmt.Printf("	privateKeyPath: %s\n", k.Struct().PrivateKeyPath)
-	fmt.Printf("	publicKeyPath:  %s\n", k.Struct().PublicKeyPath)
+	fmt.Printf("	privatePemPath: %s\n", kF.Struct().PrivatePemPath)
+	fmt.Printf("	privateKeyPath: %s\n", kF.Struct().PrivateKeyPath)
+	fmt.Printf("	publicKeyPath:  %s\n", kF.Struct().PublicKeyPath)
 
 	// keys.SaveKey(c.Config, "r1", *k.Struct())
 
@@ -82,15 +85,23 @@ func main() {
 	// sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
 	// fmt.Println(string(sDec))
 
-	err := c.Db.Put([]byte("key"), []byte("value"), nil)
-	if err !=nil {
-		panic(err)
+	objM, _ := kF.Marshall()
+	fmt.Printf("Marshalled obj: %s\n", objM)
+
+	objR, _ := kF.Unmarshall(objM)
+	fmt.Printf("Unmarshalled obj[GID]: %s\n", objR.Struct().GID)
+	fmt.Printf("Unmarshalled obj[FIP]: %s\n", objR.Struct().Fingerprint)
+
+	// LevelDB testing -----------------------------------------------------------
+	keyDB := fmt.Sprintf("keys:%s", kF.Struct().Fingerprint)
+
+	wr := c.LDb.Put([]byte(keyDB), []byte(kF.Struct().Fingerprint), nil)
+	if wr != nil {
+		panic(wr)
 	}
 
-	data, _ := c.Db.Get([]byte("key"), nil)
-	fmt.Printf("LevelDB, key -> '%s'\n", data)
-
-
+	read, _ := c.LDb.Get([]byte(keyDB), nil)
+	fmt.Printf("LevelDB, key -> '%s'\n", read)
 }
 
 // USBFPGAHardwareKeys ...
@@ -110,7 +121,7 @@ func main() {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
+	c := serial.NewSerial("/dev/tty.usbmodem2002140", 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
