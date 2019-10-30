@@ -22,24 +22,25 @@ const (
 	production  = "production"
 	test        = "test"
 
-	createdAt = "created_at"
-	updatedAt = "updated_at"
-
-	hostKeyPath = "/var/data/keys"
-
-	HostMasterKeyPath = "/var/data/key"
-	HostMasterIvPath  = "/var/data/iv"
-	HostSerialPath    = "/var/data/serial"
-
-	HostPin1 = "/var/data/pin1"
-	HostPin2 = "/var/data/pin2"
-
-	ExtBase1Path = "var/data/pin"
-	ExtBase2Path = "var/data/pin"
-
 	configurationFrmt = "yaml"
 	configurationFile = "config"
-	configurationPath = "/var/data"
+
+	homePath = "/var/data"
+	testPath = "/tmp/data"
+)
+
+var (
+	hostKeysPath string
+
+	HostMasterKeyPath string
+	HostMasterIvPath  string
+	HostSerialPath    string
+
+	HostPin1 string
+	HostPin2 string
+
+	ExtBase1Path string
+	ExtBase2Path string
 )
 
 // ConfigReader represents configuration reader
@@ -70,10 +71,29 @@ func defaults(config ConfigReader) {
 
 	t := getTimeStamp()
 
-	config.SetDefault(createdAt, t)
-	config.SetDefault(updatedAt, t)
-	config.SetDefault("base.name", "sigma")
-	config.SetDefault("keys.path", hostKeyPath)
+	config.SetDefault("created_at", t)
+	config.SetDefault("updated_at", t)
+
+	basePath := homePath
+	if config.GetString(environment) == test {
+		basePath = testPath
+	}
+
+	// Set all variables here to ensure test paths are properly configured
+	hostKeysPath = fmt.Sprintf("%s/keys", basePath)
+
+	HostMasterKeyPath = fmt.Sprintf("%s/key", basePath)
+	HostMasterIvPath  = fmt.Sprintf("%s/iv", basePath)
+	HostSerialPath    = fmt.Sprintf("%s/serial", basePath)
+
+	HostPin1 = fmt.Sprintf("%s/pin1", basePath)
+	HostPin2 = fmt.Sprintf("%s/pin2", basePath)
+
+	ExtBase1Path = "var/data/pin"
+	ExtBase2Path = "var/data/pin"
+
+	config.SetDefault("paths.base", basePath)
+	config.SetDefault("paths.keys", hostKeysPath)
 }
 
 // GetEnv - pull values or set defaults.
@@ -98,30 +118,30 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 	// Set base ENV defaults
 	defaults(config)
 
-	if config.GetString(environment) != test {
-		// Check for config file
-		cFile := fmt.Sprintf("%s/%s.%s", configurationPath, configurationFile, configurationFrmt)
-		if _, err := os.Stat(cFile); os.IsNotExist(err) {
-			os.Create(cFile)
-		}
+	basePath := config.GetString("paths.base")
 
-		// Create key path
-		if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
-			os.Mkdir(hostKeyPath, os.ModePerm)
-		}
-
-		// Toml config file settings
-		config.SetConfigType(configurationFrmt)
-		config.SetConfigName(configurationFile)
-		config.AddConfigPath(configurationPath)
-
-		if err := config.ReadInConfig(); err != nil {
-			return nil, fmt.Errorf("fatal error config file: %s", err)
-		}
-
-		// Write them to yaml config
-		config.WriteConfig()
+	// Check for config file
+	cFile := fmt.Sprintf("%s/%s.%s", basePath, configurationFile, configurationFrmt)
+	if _, err := os.Stat(cFile); os.IsNotExist(err) {
+		os.Create(cFile)
 	}
+
+	// Create key path
+	if _, err := os.Stat(hostKeysPath); os.IsNotExist(err) {
+		os.MkdirAll(hostKeysPath, os.ModePerm)
+	}
+
+	// Toml config file settings
+	config.SetConfigType(configurationFrmt)
+	config.SetConfigName(configurationFile)
+	config.AddConfigPath(basePath)
+
+	if err := config.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("fatal error config file: %s", err)
+	}
+
+	// Write them to yaml config
+	config.WriteConfig()
 
 	return config, nil
 }

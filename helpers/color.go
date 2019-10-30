@@ -6,8 +6,11 @@ import (
 
 var (
 	// Cyan - cyan with Fg and bolding
-	Cyan = color.New(color.FgHiCyan, color.Bold).SprintFunc()
+	CyanFgB = color.New(color.FgHiCyan, color.Bold).SprintFunc()
 
 	// Green - green with Fg and bolding
-	Green = color.New(color.FgHiGreen, color.Bold).SprintFunc()
+	GreenFgB = color.New(color.FgHiGreen, color.Bold).SprintFunc()
+
+	// Green - green with standard Fg formatting
+	GreenStD = color.New(color.FgHiGreen).SprintFunc()
 )

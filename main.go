@@ -5,19 +5,18 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/syndtr/goleveldb/leveldb"
-
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/services/bbolt"
 	"github.com/amanelis/bespin/services/keys"
 	"github.com/amanelis/bespin/services/serial"
 )
 
 type BackendConfiguration struct {
-	Config *config.ConfigReader
-	LDb    *leveldb.DB
-	Logger *logrus.Logger
+	C	*config.ConfigReader
+	D	bbolt.Datastore
+	L	*logrus.Logger
 }
 
 func NewClient() (*BackendConfiguration, error) {
@@ -26,17 +25,16 @@ func NewClient() (*BackendConfiguration, error) {
 		return nil, err
 	}
 
-	// Initalize LevelDB pointer
-	db, err := leveldb.OpenFile("/tmp/leveldb", nil)
+	bDb, err := bbolt.NewDB("/tmp/botldb")
 	if err != nil {
 		panic(err)
 	}
 
 	// Base BackendConfiguration to link structs and objects
 	var bc = &BackendConfiguration{
-		Config: &c,
-		LDb:    db,
-		Logger: config.LoadLogger(c),
+		C: 		&c,
+		D:  	bDb,
+		L: 		config.LoadLogger(c),
 	}
 
 	// Call welcome notification message on start
@@ -50,58 +48,41 @@ func main() {
 	c, _ := NewClient()
 
 	// Defer the database connection
-	defer c.LDb.Close()
+	defer c.D.Close()
 
 	// Check and ensure correct USB/serial peripherals have correct authentication
-	c.ValidateKeys()
+	if err := c.ValidateKeys(); err != nil {
+		panic(err)
+	}
 
 	// Begin key generation and storage into flat yaml file
-	kN, er := keys.NewECDSA(*c.Config)
+	kN, er := keys.NewECDSA(*c.C)
 	if er != nil {
 		panic(er)
 	}
 
-	kF, e := keys.GetECDSA(*c.Config, kN.Struct().Fingerprint)
+	// Try and get the new key that was created.
+	kF, e := keys.GetECDSA(*c.C, kN.Struct().Fingerprint)
 	if e != nil {
 		panic(e)
 	}
 
-	fmt.Printf("Key ID: %s\n", kF.Struct().GID.String())
-	fmt.Printf("Key FP: %s\n", kF.Struct().Fingerprint)
-	fmt.Printf("	privateKey: %s......\n", kF.Struct().PrivateKeyB64[0:32])
-	fmt.Printf("	publicKey:  %s......\n", kF.Struct().PublicKeyB64[0:32])
+	c.L.Infof("Key ID: %s", kF.Struct().GID.String())
+	c.L.Infof("Key FP: %s", kF.Struct().Fingerprint)
+	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
+	c.L.Infof("	publicKey:  %s......", kF.Struct().PublicKeyB64[0:64])
 
-	fmt.Printf("	privatePemPath: %s\n", kF.Struct().PrivatePemPath)
-	fmt.Printf("	privateKeyPath: %s\n", kF.Struct().PrivateKeyPath)
-	fmt.Printf("	publicKeyPath:  %s\n", kF.Struct().PublicKeyPath)
+	c.L.Infof("	privatePemPath: %s", kF.Struct().PrivatePemPath)
+	c.L.Infof("	privateKeyPath: %s", kF.Struct().PrivateKeyPath)
+	c.L.Infof("	publicKeyPath:  %s", kF.Struct().PublicKeyPath)
 
-	// keys.SaveKey(c.Config, "r1", *k.Struct())
-
-	// r, _ := keys.FindKey(c.Config, "r1")
-	// fmt.Println("---------------------------------------------")
-	// fmt.Printf("r1[base64 privateKey]: %s\n", r.PrivateKeyB64)
-	// fmt.Println("---------------------------------------------")
-
-	// sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
-	// fmt.Println(string(sDec))
-
-	objM, _ := kF.Marshall()
-	fmt.Printf("Marshalled obj: %s\n", objM)
-
-	objR, _ := kF.Unmarshall(objM)
-	fmt.Printf("Unmarshalled obj[GID]: %s\n", objR.Struct().GID)
-	fmt.Printf("Unmarshalled obj[FIP]: %s\n", objR.Struct().Fingerprint)
-
-	// LevelDB testing -----------------------------------------------------------
-	keyDB := fmt.Sprintf("keys:%s", kF.Struct().Fingerprint)
-
-	wr := c.LDb.Put([]byte(keyDB), []byte(kF.Struct().Fingerprint), nil)
-	if wr != nil {
-		panic(wr)
+	c.D.InsertKey([]byte("name"), []byte("alex"))
+	v, e := c.D.GetKey([]byte("name"))
+	if e != nil {
+		panic(e)
 	}
 
-	read, _ := c.LDb.Get([]byte(keyDB), nil)
-	fmt.Printf("LevelDB, key -> '%s'\n", read)
+	c.L.Infof("Boltdb key['name']: '%s'", string(v))
 }
 
 // USBFPGAHardwareKeys ...
@@ -121,7 +102,7 @@ func main() {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem2002140", 115200)
+	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
@@ -143,8 +124,8 @@ func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, er
 		return nil, ie
 	}
 
-	fmt.Printf("ky(%d) verified, OK\n", len(string(ky)))
-	fmt.Printf("iv(%d) verified, OK\n", len(string(iv)))
+	b.L.Infof("ky(%d) verified, OK", len(string(ky)))
+	b.L.Infof("iv(%d) verified, OK", len(string(iv)))
 
 	aes, err := crypto.NewAESCredentials(ky, iv)
 	if err != nil {
@@ -162,7 +143,7 @@ func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, er
 // These values decrypted must match the two  pins stored on the hardware to
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
-func (b *BackendConfiguration) ValidateKeys() {
+func (b *BackendConfiguration) ValidateKeys()  (error) {
 	var extB1, extB2 string
 
 	if runtime.GOOS == "darwin" {
@@ -172,7 +153,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", config.ExtBase1Path)
 		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", config.ExtBase2Path)
 	} else {
-		panic("Unsupported OS")
+		return fmt.Errorf("Unsupported OS")
 	}
 
 	paths := []string{
@@ -188,25 +169,25 @@ func (b *BackendConfiguration) ValidateKeys() {
 	// Check all paths, ensure every one exists
 	for _, v := range paths {
 		if !helpers.FileExists(v) {
-			panic(fmt.Errorf("Missing [%s]", v))
+			return fmt.Errorf("Missing [%s]", v)
 		}
 	}
 
 	// Pull the Key/Iv off the hardware device
 	aes, err := b.RequestHardwareKeys()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	hmK, _ := helpers.ReadFile(config.HostMasterKeyPath)
 	hmI, _ := helpers.ReadFile(config.HostMasterIvPath)
 
 	if string(aes.Key()) != hmK {
-		panic("Key does not match Hardware(key)")
+		return fmt.Errorf("Key does not match Hardware(key)")
 	}
 
 	if string(aes.Iv()) != hmI {
-		panic("Iv does not match Hardware(iv)")
+		return fmt.Errorf("Iv does not match Hardware(iv)")
 	}
 
 	// Create a cypter service object - encryption/decryption
@@ -220,7 +201,7 @@ func (b *BackendConfiguration) ValidateKeys() {
 
 	d1, _ := c.Decrypt([]byte(b1F))
 	if string(d1) != hp1F {
-		panic("Pin1 does not match, invalid ext authentication!")
+		return fmt.Errorf("Pin1 does not match, invalid ext authentication!")
 	}
 
 	b2F, _ := helpers.ReadFile(extB2)
@@ -228,15 +209,17 @@ func (b *BackendConfiguration) ValidateKeys() {
 
 	d2, _ := c.Decrypt([]byte(b2F))
 	if string(d2) != hp2F {
-		panic("Pin2 does not match, invalid ext authentication!")
+		return fmt.Errorf("Pin2 does not match, invalid ext authentication!")
 	}
+
+	return nil
 }
 
 func (b *BackendConfiguration) Welcome() {
-	fmt.Printf("%s\n", helpers.Cyan("----------------------------------------------------------------"))
-	fmt.Printf("%s: %d\n", helpers.Green("- CPUs"), runtime.NumCPU())
-	fmt.Printf("%s: %s\n", helpers.Green("- Arch"), runtime.GOARCH)
-	fmt.Printf("%s: %s\n", helpers.Green("- Compiler"), runtime.Compiler)
-	fmt.Printf("%s: %s\n", helpers.Green("- Runtime"), runtime.GOOS)
-	fmt.Printf("%s\n", helpers.Cyan("----------------------------------------------------------------"))
+	fmt.Printf("%s\n", helpers.CyanFgB("----------------------------------------------------------------"))
+	fmt.Printf("%s: %d\n", helpers.GreenFgB("- CPUs"), runtime.NumCPU())
+	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Arch"), runtime.GOARCH)
+	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Compiler"), runtime.Compiler)
+	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Runtime"), runtime.GOOS)
+	fmt.Printf("%s\n", helpers.CyanFgB("----------------------------------------------------------------"))
 }

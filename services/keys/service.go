@@ -16,30 +16,32 @@ import (
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
+	// "github.com/amanelis/bespin/services/bbolt"
 
 	guuid "github.com/google/uuid"
 )
 
 type KeyAPI interface {
 	Struct() *key
-	Marshall() (string, error)
-	Unmarshall(string) (*key, error)
+
+	marshall() (string, error)
+	unmarshall(string) (*key, error)
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
-	GID  guuid.UUID `json:"gid"` // guuid for crypto identification
+	GID  guuid.UUID // guuid for crypto identification
 
-	Fingerprint string `json:"fingerPrint"`
+	Fingerprint string
 
-	PublicKeyPath  string `json:"publicKeyPath"`
-	PrivateKeyPath string `json:"privateKeyPath"`
-	PrivatePemPath string `json:"privatePemPath"`
+	PublicKeyPath  string
+	PrivateKeyPath string
+	PrivatePemPath string
 
-	PublicKeyB64  string `json:"publicKeyB64"`
-	PrivateKeyB64 string `json:"privateKeyB64"`
+	PublicKeyB64  string
+	PrivateKeyB64 string
 }
 
 // NewECDSA - main factory method for creating the ECDSA key
@@ -48,9 +50,14 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 		GID: generateUUID(),
 	}
 
+
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
-	pri, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pri, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
@@ -64,7 +71,7 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	)
 
 	// Create file paths which include the public keys curve as signature
-	kDirPath := fmt.Sprintf("%s/%s", c.GetString("keys.path"), key.Fingerprint)
+	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.Fingerprint)
 	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
 		os.Mkdir(kDirPath, os.ModePerm)
 	}
@@ -133,19 +140,14 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 		return nil, err
 	}
 
-	// PEM #2
-	// prpem := exportPrivateKeytoPEM(sec)
-	// fmt.Printf("prpem: \n%s\n", prpem)
-	//
-	// pupem := exportPublicKeytoPEM(pub)
-	// fmt.Printf("pupem: \n%s\n", pupem)
+	// Save the data in Database
 
 	return key, nil
 }
 
 // GetECDSA - return all system keys
-func GetECDSA(c config.ConfigReader, fp string) (*key, error) {
-	kDirPath := fmt.Sprintf("%s/%s", c.GetString("keys.path"), fp)
+func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
+	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
 		return (*key)(nil), err
 	}
@@ -160,6 +162,18 @@ func GetECDSA(c config.ConfigReader, fp string) (*key, error) {
 		return (*key)(nil), err
 	}
 
+		// pri, err := base64.StdEncoding.DecodeString(obj.Struct().PrivateKeyB64)
+		// if err != nil {
+		// 	return (*key)(nil), nil
+		// }
+		//
+		// pub, err := base64.StdEncoding.DecodeString(obj.Struct().PublicKeyB64)
+		// if err != nil {
+		// 	return (*key)(nil), nil
+		// }
+		//
+		// priECDSA, pubECDSA := decode(string(pri), string(pub))
+
 	return obj, nil
 }
 
@@ -168,7 +182,7 @@ func (k *key) Struct() *key {
 	return k
 }
 
-func (k *key) Marshall() (string, error) {
+func (k *key) marshall() (string, error) {
 	d, err := keyToGOB64(k)
 	if err != nil {
 		return "", err
@@ -177,7 +191,7 @@ func (k *key) Marshall() (string, error) {
 	return d, nil
 }
 
-func (k *key) Unmarshall(obj string) (*key, error) {
+func (k *key) unmarshall(obj string) (*key, error) {
 	d, err := keyFromGOB64(obj)
 	if err != nil {
 		return (*key)(nil), err

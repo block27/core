@@ -1,10 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/Sirupsen/logrus"
 )
 
 var Config ConfigReader
@@ -13,6 +15,10 @@ func init() {
 	os.Setenv("ENVIRONMENT", "test")
 	Config, _ = LoadConfig(ConfigDefaults)
 	os.Setenv("ENVIRONMENT", "")
+
+	if Config.GetString("environment") != "test" {
+		panic(fmt.Errorf("test [environment] is not in [test] mode"))
+	}
 }
 
 func TestConstants(t *testing.T) {
@@ -27,25 +33,34 @@ func TestConstants(t *testing.T) {
 	assert.Equal(t, production, "production")
 	assert.Equal(t, test, "test")
 
-	assert.Equal(t, createdAt, "created_at")
-	assert.Equal(t, updatedAt, "updated_at")
+	assert.Equal(t, configurationFrmt, "yaml")
+	assert.Equal(t, configurationFile, "config")
+
+	assert.Equal(t, homePath, "/var/data")
+	assert.Equal(t, testPath, "/tmp/data")
 
 
-	assert.Equal(t, HostMasterKeyPath, "/var/data/key")
-	assert.Equal(t, HostMasterIvPath, "/var/data/iv")
-	assert.Equal(t, HostSerialPath, "/var/data/serial")
+	assert.Equal(t, Config.GetString("paths.base"), "/tmp/data")
+	assert.Equal(t, hostKeysPath, "/tmp/data/keys")
 
-	assert.Equal(t, hostKeyPath, "/var/data/keys")
+	assert.Equal(t, HostMasterKeyPath, "/tmp/data/key")
+	assert.Equal(t, HostMasterIvPath, "/tmp/data/iv")
+	assert.Equal(t, HostSerialPath, "/tmp/data/serial")
 
-	assert.Equal(t, HostPin1, "/var/data/pin1")
-	assert.Equal(t, HostPin2, "/var/data/pin2")
+	assert.Equal(t, HostPin1, "/tmp/data/pin1")
+	assert.Equal(t, HostPin2, "/tmp/data/pin2")
 
 	assert.Equal(t, ExtBase1Path, "var/data/pin")
 	assert.Equal(t, ExtBase2Path, "var/data/pin")
+}
 
-	assert.Equal(t, configurationFrmt, "yaml")
-	assert.Equal(t, configurationFile, "config")
-	assert.Equal(t, configurationPath, "/var/data")
+func TestLoadLogger(t *testing.T) {
+	logger := LoadLogger(Config)
+
+	if assert.NotNil(t, logger) {
+    assert.Equal(t, logger.Formatter, &logrus.TextFormatter{})
+		assert.Equal(t, logger.Level, logrus.InfoLevel)
+  }
 }
 
 func TestGetEnvExists(t *testing.T) {
