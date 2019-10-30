@@ -13,8 +13,9 @@ type SerialAPI interface {
 }
 
 type Request struct {
-	Method string
-	Size int
+	Method 	string
+	Size 		int
+	Result 	[]byte
 }
 
 type serialAPI struct {

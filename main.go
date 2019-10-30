@@ -5,8 +5,7 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	// "github.com/tarm/serial"
-	// github.com/jacobsa/go-serial/serial
+	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
@@ -16,7 +15,8 @@ import (
 )
 
 type BackendConfiguration struct {
-	Config config.ConfigReader
+	Config *config.ConfigReader
+	Db *leveldb.DB
 	Logger *logrus.Logger
 }
 
@@ -26,8 +26,16 @@ func NewClient() (*BackendConfiguration, error) {
 		return nil, err
 	}
 
+	// Initalize LevelDB pointer
+	db, err := leveldb.OpenFile("/tmp/leveldb", nil)
+  if err != nil {
+	  panic(err)
+  }
+
+	// Base BackendConfiguration to link structs and objects
 	var bc = &BackendConfiguration{
-		Config: c,
+		Config: &c,
+		Db: db,
 		Logger: config.LoadLogger(c),
 	}
 
@@ -41,18 +49,28 @@ func main() {
 	// Initalize a new client, the base entrpy point to the application code
 	c, _ := NewClient()
 
+	// Defer the database connection
+	defer c.Db.Close()
+
 	// Check and ensure correct USB/serial peripherals have correct authentication
 	c.ValidateKeys()
 
 	// Begin key generation and storage into flat yaml file
-	k, er := keys.NewKey()
-	if er != nil {
-		panic(er)
-	}
+	// k, er := keys.NewECDSA(*c.Config)
+	// if er != nil {
+	// 	panic(er)
+	// }
+
+	k, _ := keys.Get(*c.Config, "152516833740:133069067105")
 
 	fmt.Printf("Key ID: %s\n", k.Struct().GID.String())
-	fmt.Printf("	privateKey: \n%s\n", k.Struct().PrivateKeyB64)
-	fmt.Printf("	publicKey: \n%s\n", k.Struct().PublicKeyB64)
+	fmt.Printf("Key FP: %s\n", k.Struct().Fingerprint)
+	fmt.Printf("	privateKey: %s......\n", k.Struct().PrivateKeyB64[0:32])
+	fmt.Printf("	publicKey:  %s......\n", k.Struct().PublicKeyB64[0:32])
+
+	fmt.Printf("	privatePemPath: %s\n", k.Struct().PrivatePemPath)
+	fmt.Printf("	privateKeyPath: %s\n", k.Struct().PrivateKeyPath)
+	fmt.Printf("	publicKeyPath:  %s\n", k.Struct().PublicKeyPath)
 
 	// keys.SaveKey(c.Config, "r1", *k.Struct())
 
@@ -63,6 +81,15 @@ func main() {
 
 	// sDec, _ := base64.StdEncoding.DecodeString(r.PrivateKeyB64)
 	// fmt.Println(string(sDec))
+
+	err := c.Db.Put([]byte("key"), []byte("value"), nil)
+	if err !=nil {
+		panic(err)
+	}
+
+	data, _ := c.Db.Get([]byte("key"), nil)
+	fmt.Printf("LevelDB, key -> '%s'\n", data)
+
 
 }
 
@@ -83,7 +110,7 @@ func main() {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem2002140", 115200)
+	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{

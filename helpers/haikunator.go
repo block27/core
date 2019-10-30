@@ -55,7 +55,7 @@ var nouns = []string{
 
 const (
 	numbers = "0123456789"
-	hex     = "0123456789abcdef"
+	hexValu = "0123456789abcdef"
 )
 
 // New creates a new Haikunator with all default options
@@ -88,7 +88,7 @@ func (h *Haikunator) Probability() int {
 
 	for i := 0; i < h.TokenLength; i++ {
 		if h.TokenHex {
-			nums *= len(hex)
+			nums *= len(hexValu)
 		} else {
 			nums *= len(numbers)
 		}
@@ -102,7 +102,7 @@ func (h *Haikunator) buildToken() string {
 	var chars []rune
 
 	if h.TokenHex {
-		chars = []rune(hex)
+		chars = []rune(hexValu)
 	} else {
 		chars = []rune(h.TokenChars)
 	}

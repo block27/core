@@ -25,11 +25,11 @@ const (
 	createdAt = "created_at"
 	updatedAt = "updated_at"
 
+	hostKeyPath = "/var/data/keys"
+
 	HostMasterKeyPath = "/var/data/key"
 	HostMasterIvPath  = "/var/data/iv"
 	HostSerialPath    = "/var/data/serial"
-
-	hostKeyPath = "/var/data/keys"
 
 	HostPin1 = "/var/data/pin1"
 	HostPin2 = "/var/data/pin2"
@@ -73,6 +73,7 @@ func defaults(config ConfigReader) {
 	config.SetDefault(createdAt, t)
 	config.SetDefault(updatedAt, t)
 	config.SetDefault("base.name", "sigma")
+	config.SetDefault("keys.path", hostKeyPath)
 }
 
 // GetEnv - pull values or set defaults.
@@ -104,6 +105,7 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 			os.Create(cFile)
 		}
 
+		// Create key path
 		if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
 			os.Mkdir(hostKeyPath, os.ModePerm)
 		}
@@ -113,8 +115,7 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 		config.SetConfigName(configurationFile)
 		config.AddConfigPath(configurationPath)
 
-		err := config.ReadInConfig()
-		if err != nil {
+		if err := config.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("fatal error config file: %s", err)
 		}
 

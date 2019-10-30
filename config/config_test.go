@@ -20,12 +20,32 @@ func TestConstants(t *testing.T) {
 	assert.Equal(t, environment, "environment")
 	assert.Equal(t, environmentVar, "ENVIRONMENT")
 
-	assert.Equal(t, test, "test")
-	assert.Equal(t, development, "development")
-	assert.Equal(t, production, "production")
-
 	assert.Equal(t, serialNumber, "serial_number")
 	assert.Equal(t, serialNumberVar, "SERIAL_NUMBER")
+
+	assert.Equal(t, development, "development")
+	assert.Equal(t, production, "production")
+	assert.Equal(t, test, "test")
+
+	assert.Equal(t, createdAt, "created_at")
+	assert.Equal(t, updatedAt, "updated_at")
+
+
+	assert.Equal(t, HostMasterKeyPath, "/var/data/key")
+	assert.Equal(t, HostMasterIvPath, "/var/data/iv")
+	assert.Equal(t, HostSerialPath, "/var/data/serial")
+
+	assert.Equal(t, hostKeyPath, "/var/data/keys")
+
+	assert.Equal(t, HostPin1, "/var/data/pin1")
+	assert.Equal(t, HostPin2, "/var/data/pin2")
+
+	assert.Equal(t, ExtBase1Path, "var/data/pin")
+	assert.Equal(t, ExtBase2Path, "var/data/pin")
+
+	assert.Equal(t, configurationFrmt, "yaml")
+	assert.Equal(t, configurationFile, "config")
+	assert.Equal(t, configurationPath, "/var/data")
 }
 
 func TestGetEnvExists(t *testing.T) {
