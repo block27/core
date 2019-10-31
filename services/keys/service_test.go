@@ -73,7 +73,7 @@ func TestKeyToGOB64(t *testing.T) {
 }
 
 func TestKeyFromGOB64(t *testing.T) {
-	file := fmt.Sprintf("%s/%s/obj.bin", Config.GetString("paths.keys"), Key.Fingerprint)
+	file := fmt.Sprintf("%s/%s/obj.bin", Config.GetString("paths.keys"), Key.GID.String())
 	data, err := helpers.ReadFile(file)
 	if err != nil {
 		t.Logf(err.Error())

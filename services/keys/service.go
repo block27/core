@@ -24,8 +24,8 @@ import (
 type KeyAPI interface {
 	Struct() *key
 
-	marshall() (string, error)
-	unmarshall(string) (*key, error)
+	Marshall() (string, error)
+	Unmarshall(string) (KeyAPI, error)
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -50,7 +50,6 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 		GID: generateUUID(),
 	}
 
-
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
 	pri, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -71,7 +70,7 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	)
 
 	// Create file paths which include the public keys curve as signature
-	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.Fingerprint)
+	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.GID.String())
 	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
 		os.Mkdir(kDirPath, os.ModePerm)
 	}
@@ -162,18 +161,6 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 		return (*key)(nil), err
 	}
 
-		// pri, err := base64.StdEncoding.DecodeString(obj.Struct().PrivateKeyB64)
-		// if err != nil {
-		// 	return (*key)(nil), nil
-		// }
-		//
-		// pub, err := base64.StdEncoding.DecodeString(obj.Struct().PublicKeyB64)
-		// if err != nil {
-		// 	return (*key)(nil), nil
-		// }
-		//
-		// priECDSA, pubECDSA := decode(string(pri), string(pub))
-
 	return obj, nil
 }
 
@@ -182,7 +169,7 @@ func (k *key) Struct() *key {
 	return k
 }
 
-func (k *key) marshall() (string, error) {
+func (k *key) Marshall() (string, error) {
 	d, err := keyToGOB64(k)
 	if err != nil {
 		return "", err
@@ -191,10 +178,10 @@ func (k *key) marshall() (string, error) {
 	return d, nil
 }
 
-func (k *key) unmarshall(obj string) (*key, error) {
+func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	d, err := keyFromGOB64(obj)
 	if err != nil {
-		return (*key)(nil), err
+		return (KeyAPI)(nil), err
 	}
 
 	return d, nil

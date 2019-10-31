@@ -62,13 +62,13 @@ func main() {
 	}
 
 	// Try and get the new key that was created.
-	kF, e := keys.GetECDSA(*c.C, kN.Struct().Fingerprint)
+	kF, e := keys.GetECDSA(*c.C, kN.Struct().GID.String())
 	if e != nil {
 		panic(e)
 	}
 
-	c.L.Infof("Key ID: %s", kF.Struct().GID.String())
-	c.L.Infof("Key FP: %s", kF.Struct().Fingerprint)
+	c.L.Infof("Key ID: %s", helpers.MagentaFgD(kF.Struct().GID.String()))
+	c.L.Infof("Key FP: %s", helpers.MagentaFgD(kF.Struct().Fingerprint))
 	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
 	c.L.Infof("	publicKey:  %s......", kF.Struct().PublicKeyB64[0:64])
 
@@ -76,16 +76,22 @@ func main() {
 	c.L.Infof("	privateKeyPath: %s", kF.Struct().PrivateKeyPath)
 	c.L.Infof("	publicKeyPath:  %s", kF.Struct().PublicKeyPath)
 
-	c.D.InsertKey([]byte("name"), []byte("alex"))
-	v, e := c.D.GetKey([]byte("name"))
+
+	objB64, _ := kF.Marshall()
+
+	c.D.InsertKey([]byte(kF.Struct().GID.String()), []byte(objB64))
+	v, e := c.D.GetKey([]byte(kF.Struct().GID.String()))
 	if e != nil {
 		panic(e)
 	}
 
-	c.L.Infof("Boltdb key['name']: '%s'", string(v))
+	keyB64, _ := kF.Unmarshall(string(v))
+	c.L.Infof("Boltdb keyB64['GID']: '%s'", helpers.GreenFgD(keyB64.Struct().GID.String()))
+
+	// c.L.Infof("Boltdb key['name']: '%s'", helpers.GreenFgD(string(v)))
 }
 
-// USBFPGAHardwareKeys ...
+// RequestHardwareKeys ...
 //
 // This function calls the arduino board for the hardware keys via USB and
 // there are a few details to be noted:
@@ -124,8 +130,8 @@ func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, er
 		return nil, ie
 	}
 
-	b.L.Infof("ky(%d) verified, OK", len(string(ky)))
-	b.L.Infof("iv(%d) verified, OK", len(string(iv)))
+	b.L.Infof("ky(%d) verified, %s", len(string(ky)), helpers.GreenFgD("OK"))
+	b.L.Infof("iv(%d) verified, %s", len(string(iv)), helpers.GreenFgD("OK"))
 
 	aes, err := crypto.NewAESCredentials(ky, iv)
 	if err != nil {
@@ -143,7 +149,7 @@ func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, er
 // These values decrypted must match the two  pins stored on the hardware to
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
-func (b *BackendConfiguration) ValidateKeys()  (error) {
+func (b *BackendConfiguration) ValidateKeys() error {
 	var extB1, extB2 string
 
 	if runtime.GOOS == "darwin" {
@@ -196,19 +202,21 @@ func (b *BackendConfiguration) ValidateKeys()  (error) {
 		[]byte(hmI),
 	)
 
+	// Read ext1
 	b1F, _ := helpers.ReadFile(extB1)
 	hp1F, _ := helpers.ReadFile(config.HostPin1)
 
-	d1, _ := c.Decrypt([]byte(b1F))
-	if string(d1) != hp1F {
+	dec1, _ := c.Decrypt([]byte(b1F))
+	if string(dec1) != hp1F {
 		return fmt.Errorf("Pin1 does not match, invalid ext authentication!")
 	}
 
+	// Read ext2
 	b2F, _ := helpers.ReadFile(extB2)
 	hp2F, _ := helpers.ReadFile(config.HostPin2)
 
-	d2, _ := c.Decrypt([]byte(b2F))
-	if string(d2) != hp2F {
+	dec2, _ := c.Decrypt([]byte(b2F))
+	if string(dec2) != hp2F {
 		return fmt.Errorf("Pin2 does not match, invalid ext authentication!")
 	}
 
