@@ -27,7 +27,7 @@ configuration:
 	@echo "---------------------------------------------------------------------"
 
 run:
-	@$(GOBIN) build && ./bespin
+	@go build && ./bespin
 
 test_prepare:
 	@rm -rf /tmp/var/keys/* || true
