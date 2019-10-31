@@ -62,12 +62,12 @@ func main() {
 	}
 
 	// Try and get the new key that was created.
-	kF, e := keys.GetECDSA(*c.C, kN.Struct().GID.String())
+	kF, e := keys.GetECDSA(*c.C, kN.FilePointer())
 	if e != nil {
 		panic(e)
 	}
 
-	c.L.Infof("Key ID: %s", helpers.MagentaFgD(kF.Struct().GID.String()))
+	c.L.Infof("Key ID: %s", helpers.MagentaFgD(kF.FilePointer()))
 	c.L.Infof("Key FP: %s", helpers.MagentaFgD(kF.Struct().Fingerprint))
 	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
 	c.L.Infof("	publicKey:  %s......", kF.Struct().PublicKeyB64[0:64])
@@ -79,14 +79,14 @@ func main() {
 
 	objB64, _ := kF.Marshall()
 
-	c.D.InsertKey([]byte(kF.Struct().GID.String()), []byte(objB64))
-	v, e := c.D.GetKey([]byte(kF.Struct().GID.String()))
+	c.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64))
+	v, e := c.D.GetKey([]byte(kF.FilePointer()))
 	if e != nil {
 		panic(e)
 	}
 
 	keyB64, _ := kF.Unmarshall(string(v))
-	c.L.Infof("Boltdb keyB64['GID']: '%s'", helpers.GreenFgD(keyB64.Struct().GID.String()))
+	c.L.Infof("Boltdb keyB64['GID']: '%s'", helpers.GreenFgD(keyB64.FilePointer()))
 
 	// c.L.Infof("Boltdb key['name']: '%s'", helpers.GreenFgD(string(v)))
 }

@@ -22,6 +22,7 @@ import (
 )
 
 type KeyAPI interface {
+	FilePointer() string
 	Struct() *key
 
 	Marshall() (string, error)
@@ -70,7 +71,7 @@ func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
 	)
 
 	// Create file paths which include the public keys curve as signature
-	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.GID.String())
+	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.FilePointer())
 	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
 		os.Mkdir(kDirPath, os.ModePerm)
 	}
@@ -167,6 +168,10 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 // Struct - return the full object for access to non exported fields
 func (k *key) Struct() *key {
 	return k
+}
+
+func (k *key) FilePointer() string {
+	return k.GID.String()
 }
 
 func (k *key) Marshall() (string, error) {

@@ -53,6 +53,13 @@ func TestGenerateUUID(t *testing.T) {
 	}
 }
 
+func TestFilePointer(t *testing.T) {
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
+  if !r.MatchString(Key.FilePointer()) {
+		t.Fail()
+	}
+}
+
 func TestKeyToGOB64(t *testing.T) {
 	gob64, err := keyToGOB64(Key)
 	if err != nil {
@@ -73,7 +80,7 @@ func TestKeyToGOB64(t *testing.T) {
 }
 
 func TestKeyFromGOB64(t *testing.T) {
-	file := fmt.Sprintf("%s/%s/obj.bin", Config.GetString("paths.keys"), Key.GID.String())
+	file := fmt.Sprintf("%s/%s/obj.bin", Config.GetString("paths.keys"), Key.FilePointer())
 	data, err := helpers.ReadFile(file)
 	if err != nil {
 		t.Logf(err.Error())
