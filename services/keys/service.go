@@ -16,7 +16,6 @@ import (
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
-	// "github.com/amanelis/bespin/services/bbolt"
 
 	guuid "github.com/google/uuid"
 )
@@ -35,6 +34,9 @@ type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
 
+	Name string
+	Slug string
+
 	Fingerprint string
 
 	PublicKeyPath  string
@@ -45,10 +47,17 @@ type key struct {
 	PrivateKeyB64 string
 }
 
+// NewECDSABlank - create a struct from a database object marshalled into obj
+func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
+	return &key{}, nil
+}
+
 // NewECDSA - main factory method for creating the ECDSA key
-func NewECDSA(c config.ConfigReader) (KeyAPI, error) {
+func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	key := &key{
-		GID: generateUUID(),
+		GID:  generateUUID(),
+		Name: name,
+		Slug: helpers.NewHaikunator().Haikunate(),
 	}
 
 	// Real key generation, need to eventually pipe in the rand.Reader

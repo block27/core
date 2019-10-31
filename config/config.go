@@ -5,8 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 const (
@@ -83,8 +84,8 @@ func defaults(config ConfigReader) {
 	hostKeysPath = fmt.Sprintf("%s/keys", basePath)
 
 	HostMasterKeyPath = fmt.Sprintf("%s/key", basePath)
-	HostMasterIvPath  = fmt.Sprintf("%s/iv", basePath)
-	HostSerialPath    = fmt.Sprintf("%s/serial", basePath)
+	HostMasterIvPath = fmt.Sprintf("%s/iv", basePath)
+	HostSerialPath = fmt.Sprintf("%s/serial", basePath)
 
 	HostPin1 = fmt.Sprintf("%s/pin1", basePath)
 	HostPin2 = fmt.Sprintf("%s/pin2", basePath)
@@ -149,17 +150,12 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 // LoadLogger - set the defaults for the logging class
 func LoadLogger(config ConfigReader) *logrus.Logger {
 	log := logrus.New()
-	env := config.GetString(environment)
 
-	if env == production {
-		log.Formatter = &logrus.JSONFormatter{}
-	} else {
-		log.Formatter = &logrus.TextFormatter{}
-	}
+	log.Formatter = new(prefixed.TextFormatter)
 
 	log.Out = os.Stdout
 
-	log.SetLevel(logrus.InfoLevel)
+	log.SetLevel(logrus.DebugLevel)
 
 	return log
 }

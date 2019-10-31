@@ -32,7 +32,7 @@ func init() {
 		panic(fmt.Errorf("test [environment] is not in [test] mode"))
 	}
 
-	k1, err := NewECDSA(c)
+	k1, err := NewECDSA(c, "test-key")
 	if err != nil {
 		panic(err)
 	}
@@ -48,14 +48,14 @@ func TestStruct(t *testing.T) {
 
 func TestGenerateUUID(t *testing.T) {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-  if !r.MatchString(generateUUID().String()) {
+	if !r.MatchString(generateUUID().String()) {
 		t.Fail()
 	}
 }
 
 func TestFilePointer(t *testing.T) {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-  if !r.MatchString(Key.FilePointer()) {
+	if !r.MatchString(Key.FilePointer()) {
 		t.Fail()
 	}
 }
@@ -99,7 +99,7 @@ func TestKeyFromGOB64(t *testing.T) {
 	}
 }
 
-func checkFields(original *key, copied *key) (error) {
+func checkFields(original *key, copied *key) error {
 	if original.GID != copied.Struct().GID {
 		return fmt.Errorf("failed[GID]")
 	}

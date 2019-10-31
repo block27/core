@@ -10,12 +10,15 @@ const (
 	keysDB = "keys"
 )
 
+// Datastore ...
 type Datastore interface {
-	GetKey([]byte) ([]byte, error)
+	AllKeys() ([][]byte, error)
+	GetVal([]byte) ([]byte, error)
 	InsertKey([]byte, []byte) error
 	Close() error
 }
 
+// db ...
 type db struct {
 	*bbolt.DB
 }
@@ -41,30 +44,45 @@ func NewDB(path string) (Datastore, error) {
 	return &db{DB: bDb}, nil
 }
 
-// GetKey - return a value for a given key
-func (db *db) GetKey(key []byte) ([]byte, error) {
-	var value []byte
+// AllKeys - returns a byte slice of all keys
+func (db *db) AllKeys() ([][]byte, error) {
+	var value [][]byte
 
 	if err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(keysDB))
-		v := b.Get(key)
+		c := b.Cursor()
 
-		value = v
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			value = append(value, k)
+		}
 
 		return nil
-	}); err !=  nil {
+	}); err != nil {
 		return nil, err
 	}
 
 	return value, nil
 }
 
+// GetVal - return a value for a given key
+func (db *db) GetVal(key []byte) ([]byte, error) {
+	var value []byte
+
+	if err := db.View(func(tx *bbolt.Tx) error {
+		value = tx.Bucket([]byte(keysDB)).Get(key)
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+// InsertKey - insert a key/value pair into a given bucket
 func (db *db) InsertKey(key []byte, val []byte) error {
 	if err := db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(keysDB))
-		err := b.Put(key, val)
-
-		return err
+		return tx.Bucket([]byte(keysDB)).Put(key, val)
 	}); err != nil {
 		return err
 	}

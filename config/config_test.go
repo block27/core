@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/Sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var Config ConfigReader
@@ -39,7 +40,6 @@ func TestConstants(t *testing.T) {
 	assert.Equal(t, homePath, "/var/data")
 	assert.Equal(t, testPath, "/tmp/data")
 
-
 	assert.Equal(t, Config.GetString("paths.base"), "/tmp/data")
 	assert.Equal(t, hostKeysPath, "/tmp/data/keys")
 
@@ -58,9 +58,9 @@ func TestLoadLogger(t *testing.T) {
 	logger := LoadLogger(Config)
 
 	if assert.NotNil(t, logger) {
-    assert.Equal(t, logger.Formatter, &logrus.TextFormatter{})
-		assert.Equal(t, logger.Level, logrus.InfoLevel)
-  }
+		assert.Equal(t, logger.Formatter, &prefixed.TextFormatter{})
+		assert.Equal(t, logger.Level, logrus.DebugLevel)
+	}
 }
 
 func TestGetEnvExists(t *testing.T) {

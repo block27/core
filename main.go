@@ -1,23 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"runtime"
-
-	"github.com/Sirupsen/logrus"
 	"github.com/amanelis/bespin/config"
-	"github.com/amanelis/bespin/crypto"
-	"github.com/amanelis/bespin/helpers"
-	"github.com/amanelis/bespin/services/bbolt"
+	h "github.com/amanelis/bespin/helpers"
+	b "github.com/amanelis/bespin/services/bbolt"
 	"github.com/amanelis/bespin/services/keys"
-	"github.com/amanelis/bespin/services/serial"
 )
-
-type BackendConfiguration struct {
-	C	*config.ConfigReader
-	D	bbolt.Datastore
-	L	*logrus.Logger
-}
 
 func NewClient() (*BackendConfiguration, error) {
 	c, err := config.LoadConfig(config.ConfigDefaults)
@@ -25,16 +13,16 @@ func NewClient() (*BackendConfiguration, error) {
 		return nil, err
 	}
 
-	bDb, err := bbolt.NewDB("/tmp/botldb")
+	bDb, err := b.NewDB("/tmp/botldb")
 	if err != nil {
 		panic(err)
 	}
 
 	// Base BackendConfiguration to link structs and objects
 	var bc = &BackendConfiguration{
-		C: 		&c,
-		D:  	bDb,
-		L: 		config.LoadLogger(c),
+		C: &c,
+		D: bDb,
+		L: config.LoadLogger(c),
 	}
 
 	// Call welcome notification message on start
@@ -56,7 +44,7 @@ func main() {
 	}
 
 	// Begin key generation and storage into flat yaml file
-	kN, er := keys.NewECDSA(*c.C)
+	kN, er := keys.NewECDSA(*c.C, "some-name")
 	if er != nil {
 		panic(er)
 	}
@@ -67,167 +55,33 @@ func main() {
 		panic(e)
 	}
 
-	c.L.Infof("Key ID: %s", helpers.MagentaFgD(kF.FilePointer()))
-	c.L.Infof("Key FP: %s", helpers.MagentaFgD(kF.Struct().Fingerprint))
+	c.L.Infof("--------- NEW KEY -----------------------------")
+	c.L.Infof("Key ID: %s", h.MagentaFgD(kF.FilePointer()))
+	c.L.Infof("Key FP: %s", h.MagentaFgD(kF.Struct().Fingerprint))
 	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
 	c.L.Infof("	publicKey:  %s......", kF.Struct().PublicKeyB64[0:64])
 
 	c.L.Infof("	privatePemPath: %s", kF.Struct().PrivatePemPath)
 	c.L.Infof("	privateKeyPath: %s", kF.Struct().PrivateKeyPath)
 	c.L.Infof("	publicKeyPath:  %s", kF.Struct().PublicKeyPath)
-
+	c.L.Infof("--------- NEW KEY -----------------------------")
 
 	objB64, _ := kF.Marshall()
 
-	c.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64))
-	v, e := c.D.GetKey([]byte(kF.FilePointer()))
-	if e != nil {
-		panic(e)
+	// Insert value to boltDB
+	if err := c.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64)); err != nil {
+		panic(err)
 	}
 
-	keyB64, _ := kF.Unmarshall(string(v))
-	c.L.Infof("Boltdb keyB64['GID']: '%s'", helpers.GreenFgD(keyB64.FilePointer()))
+	// Get value from boltDB
+	value, _ := c.D.GetVal([]byte(kF.FilePointer()))
+	newKy, _ := keys.NewECDSABlank(*c.C)
 
-	// c.L.Infof("Boltdb key['name']: '%s'", helpers.GreenFgD(string(v)))
-}
+	newKy, _ = newKy.Unmarshall(string(value))
+	c.L.Infof("Boltdb keyB64['GID']: '%s'", h.GreenFgD(newKy.FilePointer()))
 
-// RequestHardwareKeys ...
-//
-// This function calls the arduino board for the hardware keys via USB and
-// there are a few details to be noted:
-//
-// key can be returned in raw or in base64
-//
-// The format of the key  is {type}.Request.{byte|base}.{length to read}
-//
-// KEY:
-// key(base64) -> k.Request.base44 	// 44 bytes
-// key(raw) -> k.Request.byte32 		// 32 bytes
-//
-// IV:
-// iv(base64) -> i.Request.base24 	// 24 bytes
-// iv(raw) -> i.Request.byte16 			// 16 bytes
-func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
-
-	// Request KEY
-	ky, ke := c.Request(serial.Request{
-		Method: "k.Request.byte32\r",
-		Size:   32,
-	})
-
-	if ke != nil {
-		panic(ke)
+	keys, _ := c.D.AllKeys()
+	for _, v := range keys {
+		c.L.Infof("%s='%s'", h.MagentaFgD("Key"), h.GreenFgB(string(v)))
 	}
-
-	// Request IV
-	iv, ie := c.Request(serial.Request{
-		Method: "i.Request.byte16\r",
-		Size:   16,
-	})
-
-	if ie != nil {
-		return nil, ie
-	}
-
-	b.L.Infof("ky(%d) verified, %s", len(string(ky)), helpers.GreenFgD("OK"))
-	b.L.Infof("iv(%d) verified, %s", len(string(iv)), helpers.GreenFgD("OK"))
-
-	aes, err := crypto.NewAESCredentials(ky, iv)
-	if err != nil {
-		return nil, err
-	}
-
-	return aes, nil
-}
-
-// ValidateKeys ...
-//
-// A Key/Iv will be stored on the hardware device itself. These two values
-// are used to encrypt the two pins stored in the ext volumes [BASE1, BASE2]
-//
-// These values decrypted must match the two  pins stored on the hardware to
-// work, if removed or altered, HSM  code will  not run. But key recovery is
-// still possible.
-func (b *BackendConfiguration) ValidateKeys() error {
-	var extB1, extB2 string
-
-	if runtime.GOOS == "darwin" {
-		extB1 = fmt.Sprintf("%s/%s", "/Volumes/BASE1", config.ExtBase1Path)
-		extB2 = fmt.Sprintf("%s/%s", "/Volumes/BASE2", config.ExtBase2Path)
-	} else if runtime.GOOS == "linux" {
-		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", config.ExtBase1Path)
-		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", config.ExtBase2Path)
-	} else {
-		return fmt.Errorf("Unsupported OS")
-	}
-
-	paths := []string{
-		config.HostMasterKeyPath,
-		config.HostMasterIvPath,
-		config.HostPin1,
-		config.HostPin2,
-		config.HostSerialPath,
-		extB1,
-		extB2,
-	}
-
-	// Check all paths, ensure every one exists
-	for _, v := range paths {
-		if !helpers.FileExists(v) {
-			return fmt.Errorf("Missing [%s]", v)
-		}
-	}
-
-	// Pull the Key/Iv off the hardware device
-	aes, err := b.RequestHardwareKeys()
-	if err != nil {
-		return err
-	}
-
-	hmK, _ := helpers.ReadFile(config.HostMasterKeyPath)
-	hmI, _ := helpers.ReadFile(config.HostMasterIvPath)
-
-	if string(aes.Key()) != hmK {
-		return fmt.Errorf("Key does not match Hardware(key)")
-	}
-
-	if string(aes.Iv()) != hmI {
-		return fmt.Errorf("Iv does not match Hardware(iv)")
-	}
-
-	// Create a cypter service object - encryption/decryption
-	c, _ := crypto.NewCrypter(
-		[]byte(hmK),
-		[]byte(hmI),
-	)
-
-	// Read ext1
-	b1F, _ := helpers.ReadFile(extB1)
-	hp1F, _ := helpers.ReadFile(config.HostPin1)
-
-	dec1, _ := c.Decrypt([]byte(b1F))
-	if string(dec1) != hp1F {
-		return fmt.Errorf("Pin1 does not match, invalid ext authentication!")
-	}
-
-	// Read ext2
-	b2F, _ := helpers.ReadFile(extB2)
-	hp2F, _ := helpers.ReadFile(config.HostPin2)
-
-	dec2, _ := c.Decrypt([]byte(b2F))
-	if string(dec2) != hp2F {
-		return fmt.Errorf("Pin2 does not match, invalid ext authentication!")
-	}
-
-	return nil
-}
-
-func (b *BackendConfiguration) Welcome() {
-	fmt.Printf("%s\n", helpers.CyanFgB("----------------------------------------------------------------"))
-	fmt.Printf("%s: %d\n", helpers.GreenFgB("- CPUs"), runtime.NumCPU())
-	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Arch"), runtime.GOARCH)
-	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Compiler"), runtime.Compiler)
-	fmt.Printf("%s: %s\n", helpers.GreenFgB("- Runtime"), runtime.GOOS)
-	fmt.Printf("%s\n", helpers.CyanFgB("----------------------------------------------------------------"))
 }
