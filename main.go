@@ -55,7 +55,7 @@ func main() {
 		panic(e)
 	}
 
-	c.L.Infof("--------- NEW KEY -----------------------------")
+	c.L.Infof("%s", h.RedFgB("> NEW EDSA P256 KEY ----------------------------------------------"))
 	c.L.Infof("Key ID: %s", h.MagentaFgD(kF.FilePointer()))
 	c.L.Infof("Key FP: %s", h.MagentaFgD(kF.Struct().Fingerprint))
 	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
@@ -64,7 +64,7 @@ func main() {
 	c.L.Infof("	privatePemPath: %s", kF.Struct().PrivatePemPath)
 	c.L.Infof("	privateKeyPath: %s", kF.Struct().PrivateKeyPath)
 	c.L.Infof("	publicKeyPath:  %s", kF.Struct().PublicKeyPath)
-	c.L.Infof("--------- NEW KEY -----------------------------")
+	c.L.Infof("%s", h.RedFgB("> NEW EDSA P256 KEY ----------------------------------------------"))
 
 	objB64, _ := kF.Marshall()
 
@@ -76,6 +76,10 @@ func main() {
 	// Get value from boltDB
 	value, _ := c.D.GetVal([]byte(kF.FilePointer()))
 	newKy, _ := keys.NewECDSABlank(*c.C)
+
+	keysCnt, _ := c.D.AllKeys()
+	numKeys := len(keysCnt)
+	c.L.Infof("Boltdb keys in 'keys' bucket: %d", numKeys)
 
 	newKy, _ = newKy.Unmarshall(string(value))
 	c.L.Infof("Boltdb keyB64['GID']: '%s'", h.GreenFgD(newKy.FilePointer()))

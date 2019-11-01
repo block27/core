@@ -17,6 +17,15 @@ var (
 	// GreenFgD ...
 	GreenFgD = color.New(color.FgHiGreen).SprintFunc()
 
+	// MagentaFgB ...
+	MagentaFgB = color.New(color.FgMagenta, color.Bold).SprintFunc()
+
 	// MagentaFgD ...
 	MagentaFgD = color.New(color.FgMagenta).SprintFunc()
+
+	// RedFgD
+	RedFgD = color.New(color.FgRed).SprintFunc()
+
+	// RedFgB
+	RedFgB = color.New(color.FgRed, color.Bold).SprintFunc()
 )
