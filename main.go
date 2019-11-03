@@ -55,16 +55,17 @@ func main() {
 		panic(e)
 	}
 
-	c.L.Infof("%s", h.RedFgB("> NEW EDSA P256 KEY ----------------------------------------------"))
+	c.L.Infof("> NEW EDSA %s KEY ----------------------------------------------", h.RedFgB(kF.Struct().KeySize))
 	c.L.Infof("Key ID: %s", h.MagentaFgD(kF.FilePointer()))
 	c.L.Infof("Key FP: %s", h.MagentaFgD(kF.Struct().Fingerprint))
+	c.L.Infof("Key BS: %s", h.MagentaFgD(kF.Struct().KeySize))
 	c.L.Infof("	privateKey: %s......", kF.Struct().PrivateKeyB64[0:64])
 	c.L.Infof("	publicKey:  %s......", kF.Struct().PublicKeyB64[0:64])
 
 	c.L.Infof("	privatePemPath: %s", kF.Struct().PrivatePemPath)
 	c.L.Infof("	privateKeyPath: %s", kF.Struct().PrivateKeyPath)
 	c.L.Infof("	publicKeyPath:  %s", kF.Struct().PublicKeyPath)
-	c.L.Infof("%s", h.RedFgB("> NEW EDSA P256 KEY ----------------------------------------------"))
+	c.L.Infof("> NEW EDSA %s KEY ----------------------------------------------", h.RedFgB(kF.Struct().KeySize))
 
 	objB64, _ := kF.Marshall()
 
@@ -82,7 +83,7 @@ func main() {
 	c.L.Infof("Boltdb keys in 'keys' bucket: %d", numKeys)
 
 	newKy, _ = newKy.Unmarshall(string(value))
-	c.L.Infof("Boltdb keyB64['GID']: '%s'", h.GreenFgD(newKy.FilePointer()))
+	c.L.Infof("Boltdb keyB64['GID']: '%s'", h.MagentaFgD(newKy.FilePointer()))
 
 	keys, _ := c.D.AllKeys()
 	for _, v := range keys {

@@ -39,6 +39,8 @@ type key struct {
 
 	Fingerprint string
 
+	KeySize int
+
 	PublicKeyPath  string
 	PrivateKeyPath string
 	PrivatePemPath string
@@ -54,30 +56,31 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 
 // NewECDSA - main factory method for creating the ECDSA key
 func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
-	key := &key{
-		GID:  generateUUID(),
-		Name: name,
-		Slug: helpers.NewHaikunator().Haikunate(),
-	}
-
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
-	pri, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pri, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
+	// Grab the public key
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
 	pemKey, pemPub := encode(pri, pub)
 
-	key.PublicKeyB64 = base64.StdEncoding.EncodeToString([]byte(pemPub))
-	key.PrivateKeyB64 = base64.StdEncoding.EncodeToString([]byte(pemKey))
-	key.Fingerprint = fmt.Sprintf("%s%s",
-		pub.X.String()[0:12],
-		pub.Y.String()[0:12],
-	)
+	key := &key{
+		GID:           generateUUID(),
+		Name:          name,
+		Slug:          helpers.NewHaikunator().Haikunate(),
+		KeySize:       pri.Params().BitSize,
+		PublicKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemPub)),
+		PrivateKeyB64: base64.StdEncoding.EncodeToString([]byte(pemKey)),
+		Fingerprint: fmt.Sprintf("%s%s",
+			pub.X.String()[0:12],
+			pub.Y.String()[0:12],
+		),
+	}
 
 	// Create file paths which include the public keys curve as signature
 	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.FilePointer())
