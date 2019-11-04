@@ -29,16 +29,16 @@ configuration:
 run:
 	@go build && ./bespin
 
-test_prepare:
+prepare_tests:
 	@rm -rf /tmp/var/keys/* || true
 
 test: test_richgo
 
-test_golang: test_prepare
+test_golang: prepare_tests
 	@go test -v ./... -cover
 
-test_gotest: test_prepare
+test_gotest: prepare_tests
 	@gotest -v ./... -cover
 
-test_richgo: test_prepare
+test_richgo: prepare_tests
 	@richgo test ./... -v -cover

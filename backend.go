@@ -41,7 +41,7 @@ type BackendConfiguration struct {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *BackendConfiguration) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	c := serial.NewSerial("/dev/tty.usbmodem2002140", 115200)
+	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
@@ -15,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/amanelis/bespin/config"
+	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
 
 	guuid "github.com/google/uuid"
@@ -58,7 +58,7 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
-	pri, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	pri, err := ecdsa.GenerateKey(elliptic.P256(), crypto.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -151,8 +151,6 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
 		return nil, err
 	}
-
-	// Save the data in Database
 
 	return key, nil
 }
@@ -267,7 +265,7 @@ func importPrivateKeyfromEncryptedPEM(pemsec, password []byte) *ecdsa.PrivateKey
 // exportPrivateKeytoEncryptedPEM ...
 func exportPrivateKeytoEncryptedPEM(sec *ecdsa.PrivateKey, password []byte) []byte {
 	l, _ := x509.MarshalECPrivateKey(sec)
-	m, _ := x509.EncryptPEMBlock(rand.Reader, "EC PRIVATE KEY", l, password, x509.PEMCipherAES256)
+	m, _ := x509.EncryptPEMBlock(crypto.Reader, "EC PRIVATE KEY", l, password, x509.PEMCipherAES256)
 	n := pem.EncodeToMemory(m)
 
 	keypem, _ := os.OpenFile("sec.Encrypted.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)

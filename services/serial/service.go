@@ -64,9 +64,6 @@ func (e *serialAPI) Request(params Request) ([]byte, error) {
 	return buff[:rq], nil
 }
 
-
-
-
 // func Listen() {
 // 	options := serial.OpenOptions{
 // 			PortName:        "/dev/cu.SLAB_USBtoUART",
