@@ -32,6 +32,10 @@ run:
 prepare_tests:
 	@rm -rf /tmp/var/keys/* || true
 
+setup_machine:
+	mkdir -p /tmp/data
+	mkdir -p /var/data
+
 test: test_richgo
 
 test_golang: prepare_tests
