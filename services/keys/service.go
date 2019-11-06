@@ -17,7 +17,13 @@ import (
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
 
+	"github.com/sirupsen/logrus"
 	guuid "github.com/google/uuid"
+)
+
+const (
+	statusActive 		= "active"
+	statusArchived 	= "archive"
 )
 
 type KeyAPI interface {
@@ -36,10 +42,10 @@ type key struct {
 
 	Name string
 	Slug string
-
-	Fingerprint string
+	Status string
 
 	KeySize int
+	Fingerprint string
 
 	PublicKeyPath  string
 	PrivateKeyPath string
@@ -74,6 +80,7 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 		Name:          name,
 		Slug:          helpers.NewHaikunator().Haikunate(),
 		KeySize:       pri.Params().BitSize,
+		Status:  			 statusActive,
 		PublicKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64: base64.StdEncoding.EncodeToString([]byte(pemKey)),
 		Fingerprint: fmt.Sprintf("%s%s",
@@ -175,15 +182,44 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
+func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
+	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
+  if err != nil {
+    return nil, err
+  }
+
+	var keys []KeyAPI
+
+  for _, f := range files {
+		_key, _err := GetECDSA(c, f.Name())
+		if _err != nil {
+			return nil, _err
+		}
+
+		keys = append(keys, _key)
+  }
+
+	return keys, nil
+}
+
+// PrintKey - helper function to print a key
+func PrintKey(k *key, l *logrus.Logger) {
+	l.Infof("Key ID: %s", helpers.MagentaFgD(k.FilePointer()))
+	l.Infof("Key KeySize: %s", helpers.RedFgB(k.Struct().KeySize))
+	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
+	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
+	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
+	l.Infof("	%s privateKey: %s......",helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
+	l.Infof("	%s publicKey:  %s......",helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
+	l.Infof("	%s privatePemPath: %s",helpers.RedFgB(">"), k.Struct().PrivatePemPath)
+	l.Infof("	%s privateKeyPath: %s",helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
+	l.Infof("	%s publicKeyPath:  %s",helpers.RedFgB(">"), k.Struct().PublicKeyPath)
+}
+
 // FilePointer - return a string that will represent the path the key can be
 // written to on the file system
 func (k *key) FilePointer() string {
 	return k.GID.String()
-}
-
-// Struct - return the full object for access to non exported fields
-func (k *key) Struct() *key {
-	return k
 }
 
 // Marshall ...
@@ -204,6 +240,11 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	}
 
 	return d, nil
+}
+
+// Struct - return the full object for access to non exported fields
+func (k *key) Struct() *key {
+	return k
 }
 
 // generateUUID - generate and return a valid GUUID

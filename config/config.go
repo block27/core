@@ -141,6 +141,8 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 		return nil, fmt.Errorf("fatal error config file: %s", err)
 	}
 
+	config.AutomaticEnv()
+
 	// Write them to yaml config
 	config.WriteConfig()
 

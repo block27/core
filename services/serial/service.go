@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/tarm/serial"
-	// "github.com/jacobsa/go-serial/serial"
 )
 
 type SerialAPI interface {

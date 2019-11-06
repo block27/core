@@ -1,0 +1,25 @@
+// Get value from boltDB
+value, _ := b.D.GetVal([]byte(kF.FilePointer()))
+newKy, _ := keys.NewECDSABlank(*b.C)
+
+newKy, _ = newKy.Unmarshall(string(value))
+b.L.Infof("Boltdb keyB64['GID']: '%s'", h.MagentaFgD(newKy.FilePointer()))
+
+// Count keys from boltDB
+keysCnt, _ := b.D.AllKeys()
+numKeys := len(keysCnt)
+b.L.Infof("Boltdb keys in 'keys' bucket: %d", numKeys)
+
+// Get all keys from boltDB
+keys, _ := b.D.AllKeys()
+for _, v := range keys {
+	b.L.Infof("%s='%s'", h.MagentaFgD("Key"), h.GreenFgB(string(v)))
+}
+
+// Insert data into boltDB
+objB64, _ := kF.Marshall()
+
+// Insert value to boltDB
+if err := b.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64)); err != nil {
+	panic(err)
+}

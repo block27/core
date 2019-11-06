@@ -23,9 +23,23 @@ var (
 	// MagentaFgD ...
 	MagentaFgD = color.New(color.FgMagenta).SprintFunc()
 
-	// RedFgD
+	// RedFgD ...
 	RedFgD = color.New(color.FgRed).SprintFunc()
 
-	// RedFgB
+	// RedFgB ...
 	RedFgB = color.New(color.FgRed, color.Bold).SprintFunc()
+
+	// WhiteFgD ...
+	WhiteFgD = color.New(color.FgWhite).SprintFunc()
+
+	// WhiteFgB ...
+	WhiteFgB = color.New(color.FgWhite, color.Bold).SprintFunc()
+
+
+	// YellowFgD ...
+	YellowFgD = color.New(color.FgYellow).SprintFunc()
+
+	// YellowFgB ...
+	YellowFgB = color.New(color.FgYellow, color.Bold).SprintFunc()
+
 )

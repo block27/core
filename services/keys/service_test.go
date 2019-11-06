@@ -41,6 +41,46 @@ func init() {
 	Config = c
 }
 
+func TestNewECDSABlank(t *testing.T) {
+	result, err := NewECDSABlank(Config)
+	if err != nil {
+		t.Fail()
+	}
+
+	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
+	assert.Equal(t, result.Struct().Name, "")
+	assert.Equal(t, result.Struct().Slug, "")
+	assert.Equal(t, result.Struct().Status, "")
+	assert.Equal(t, result.Struct().KeySize, 0)
+	assert.Equal(t, result.Struct().Fingerprint, "")
+}
+
+func TestGetECDSA(t *testing.T) {
+	result, err := GetECDSA(Config, Key.FilePointer())
+	if err != nil {
+		t.Fail()
+	}
+
+	assert.NotNil(t, result.Struct().GID)
+	assert.NotNil(t, result.Struct().Fingerprint)
+}
+
+func TestListECDSA(t *testing.T) {
+	_, err := NewECDSA(Config, "context-key")
+	if err != nil {
+		t.Fail()
+	}
+
+	result, err := ListECDSA(Config)
+	if err != nil {
+		t.Fail()
+	}
+
+	if len(result) == 0 {
+		t.Fail()
+	}
+}
+
 func TestStruct(t *testing.T) {
 	assert.NotNil(t, Key.Struct().GID)
 	assert.NotNil(t, Key.Struct().Fingerprint)
