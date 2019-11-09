@@ -2,6 +2,7 @@ package keys
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"fmt"
 	"os"
 	"regexp"
@@ -32,13 +33,122 @@ func init() {
 		panic(fmt.Errorf("test [environment] is not in [test] mode"))
 	}
 
-	k1, err := NewECDSA(c, "test-key")
+	k1, err := NewECDSA(c, "test-key-0", 256)
 	if err != nil {
 		panic(err)
 	}
 
 	Key = k1.Struct()
 	Config = c
+}
+
+func TestNewECDSA(t *testing.T) {
+	k, err := NewECDSA(Config, "test-key-1", 256)
+	if err != nil {
+		t.Fail()
+	}
+
+	c := elliptic.P256()
+	p, e := k.getPrivateKey()
+	if e != nil {
+		t.Fail()
+	}
+
+	if !c.IsOnCurve(p.PublicKey.X, p.PublicKey.Y) {
+		t.Fail()
+	}
+}
+
+func BenchmarkSignP224(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-224", 224)
+	if err != nil {
+		b.Fail()
+	}
+
+	_, e := k.getPrivateKey()
+	if e != nil {
+		b.Fail()
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			k.Sign(hashed)
+		}
+	})
+}
+
+func BenchmarkSignP256(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-256", 256)
+	if err != nil {
+		b.Fail()
+	}
+
+	_, e := k.getPrivateKey()
+	if e != nil {
+		b.Fail()
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			k.Sign(hashed)
+		}
+	})
+}
+
+func BenchmarkSignP384(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-384", 384)
+	if err != nil {
+		b.Fail()
+	}
+
+	_, e := k.getPrivateKey()
+	if e != nil {
+		b.Fail()
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			k.Sign(hashed)
+		}
+	})
+}
+
+func BenchmarkSignP521(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-521", 521)
+	if err != nil {
+		b.Fail()
+	}
+
+	_, e := k.getPrivateKey()
+	if e != nil {
+		b.Fail()
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			k.Sign(hashed)
+		}
+	})
 }
 
 func TestNewECDSABlank(t *testing.T) {
@@ -68,7 +178,7 @@ func TestGetECDSA(t *testing.T) {
 }
 
 func TestListECDSA(t *testing.T) {
-	_, err := NewECDSA(Config, "context-key")
+	_, err := NewECDSA(Config, "context-key", 256)
 	if err != nil {
 		t.Fail()
 	}

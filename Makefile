@@ -45,11 +45,17 @@ setup_machine:
 
 test: test_richgo
 
+test_coverage_func:
+	@go tool cover -func=coverage.out
+
+test_coverage_html:
+	@go tool cover -html=coverage.out
+
 test_golang: prepare_tests
-	@go test -v ./... -cover
+	@go test -v ./... -cover -coverprofile=coverage.out
 
 test_gotest: prepare_tests
-	@gotest -v ./... -cover
+	@gotest -v ./... -cover -coverprofile=coverage.out
 
 test_richgo: prepare_tests
-	@richgo test ./... -v -cover
+	@richgo test ./... -v -cover -coverprofile=coverage.out

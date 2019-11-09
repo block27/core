@@ -53,24 +53,34 @@ type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
 
+	// Base name passed from CLI, *not indexed
 	Name string
+
+	// Slug auto generated from Haiku *not indexed
 	Slug string
+
+	// Hold the base key status, {archive, active}
 	Status string
 
+	// Basically the elliptic curve size of the key
 	KeySize int
 
-	FingerprintMD5 string
-	FingerprintSHA string
+	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
+	FingerprintSHA string // Real fingerprint in  SHA256  of the key
 
-	PublicKeyPath  string
-	PrivateKeyPath string
-	PrivatePemPath string
+	PrivatePemPath string // Pem PKS8 format of the private key
+	PrivateKeyPath string // ECDSA path for private key
+	PublicKeyPath  string // ECDSA path for public key
 
-	PublicKeyB64  string
-	PrivateKeyB64 string
+	PrivateKeyB64 string // B64 of private key
+	PublicKeyB64  string // B64 of public key
 
+	// Used as place holder converstions during Sign/Verify
+	// these should probably be set to nil after use as it's
+	// easy access to  the real  objects,  hence why they   aren't
+	// publically accessible.  taste it.
 	privateKey *ecdsa.PrivateKey
-	publicKey *ecdsa.PublicKey
+	publicKey  *ecdsa.PublicKey
 }
 
 // NewECDSABlank - create a struct from a database object marshalled into obj
@@ -79,10 +89,27 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 }
 
 // NewECDSA - main factory method for creating the ECDSA key
-func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
+func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
-	pri, err := ecdsa.GenerateKey(elliptic.P256(), crypto.Reader)
+	var curve elliptic.Curve
+
+	// Binary 192, 224, 256, 384, and 521
+	// Prime 163, 233, 283, 409, and 571
+	switch size {
+	case 224:
+		curve = elliptic.P224()
+	case 256:
+		curve = elliptic.P256()
+	case 384:
+		curve = elliptic.P384()
+	case 521:
+		curve = elliptic.P521()
+	default:
+		return nil, fmt.Errorf("incorrect curve size passed")
+	}
+
+	pri, err := ecdsa.GenerateKey(curve, crypto.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +133,14 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	}
 
 	// Create file paths which include the public keys curve as signature
-	kDirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.FilePointer())
-	if _, err := os.Stat(kDirPath); os.IsNotExist(err) {
-		os.Mkdir(kDirPath, os.ModePerm)
+	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.FilePointer())
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, os.ModePerm)
 	}
 
-	key.PrivateKeyPath = fmt.Sprintf("%s/%s", kDirPath, "private.key")
-	key.PublicKeyPath = fmt.Sprintf("%s/%s", kDirPath, "public.key")
-	key.PrivatePemPath = fmt.Sprintf("%s/%s", kDirPath, "private.pem")
+	key.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
+	key.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
+	key.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
 
 	// save private and public key separately
 	privatekeyFile, err := os.Create(key.PrivateKeyPath)
@@ -164,7 +191,7 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	}
 
 	// Write data to  file
-	binFile := fmt.Sprintf("%s/%s", kDirPath, "obj.bin")
+	binFile := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
 	objFile, err := os.Create(binFile)
 	if err != nil {
 		return nil, err
@@ -198,6 +225,7 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
+// ListECDSA ...
 func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
   if err != nil {

@@ -41,7 +41,7 @@ var keysCreateCmd = &cobra.Command{
     B.L.Printf("%s", h.CyanFgB("Keys[CREATE]"))
   },
   Run: func(cmd *cobra.Command, args []string) {
-		key, e := k.NewECDSA(*B.C, name)
+		key, e := k.NewECDSA(*B.C, name, 256)
 		if e != nil {
 			panic(e)
 		}

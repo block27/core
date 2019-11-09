@@ -23,3 +23,13 @@ objB64, _ := kF.Marshall()
 if err := b.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64)); err != nil {
 	panic(err)
 }
+
+
+// Grabing key signatures from ssh-keygen
+// ssh-keygen -l -E md5 -f ~/.ssh/id_rsa.pub
+// 2048 MD5:44:91:e0:e3:64:1e:38:6e:24:7e:40:09:a3:42:2f:84 shaman@shaman.local (RSA)
+// ssh-keygen -l -v -f ~/.ssh/id_rsa.pub
+// 2048 SHA256:JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54 shaman@shaman.local
+//
+// awk '{print $2}' ~/.ssh/id_rsa.pub | base64 -D | sha256sum -b | sed 's/ .*$//' | xxd -r -p | base64
+// JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54=
