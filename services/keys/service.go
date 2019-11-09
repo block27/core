@@ -43,8 +43,8 @@ type KeyAPI interface {
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
 
-	Sign([]byte) (*big.Int, *big.Int, []byte, error)
-	Verify(*ecdsa.PublicKey, []byte, *big.Int, *big.Int) bool
+	Sign([]byte) (*ecdsaSignature, error)
+	Verify(*ecdsa.PublicKey, []byte, *ecdsaSignature) bool
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -83,12 +83,18 @@ type key struct {
 	publicKey  *ecdsa.PublicKey
 }
 
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
 // NewECDSABlank - create a struct from a database object marshalled into obj
 func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
-// NewECDSA - main factory method for creating the ECDSA key
+// NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
+// but what happens here is complete key generation using our cyrpto/rand lib
+//
 func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
@@ -120,6 +126,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// PEM #1 - encoding
 	pemKey, pemPub := encode(pri, pub)
 
+	// Create the key struct object
 	key := &key{
 		GID:            generateUUID(),
 		Name:           name,
@@ -205,7 +212,8 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	return key, nil
 }
 
-// GetECDSA - fetch a system key that lives on the file system
+// GetECDSA - fetch a system key that lives on the file system. Return useful
+// identification data aobut the key, likes its SHA256 and MD5 signatures
 func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
@@ -225,7 +233,8 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
-// ListECDSA ...
+// ListECDSA - returns a list of active keys stored on the local filesystem. Of
+// which are all encrypted via AES from the hardware block
 func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
   if err != nil {
@@ -244,22 +253,6 @@ func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
   }
 
 	return keys, nil
-}
-
-// PrintKey - helper function to print a key
-func PrintKey(k *key, l *logrus.Logger) {
-	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
-	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
-	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key KeySize: %s", helpers.RedFgB(k.Struct().KeySize))
-	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
-	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
-	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
-	l.Infof("	%s privateKey: %s......",helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
-	l.Infof("	%s publicKey:  %s......",helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
-	l.Infof("	%s privatePemPath: %s",helpers.RedFgB(">"), k.Struct().PrivatePemPath)
-	l.Infof("	%s privateKeyPath: %s",helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
-	l.Infof("	%s publicKeyPath:  %s",helpers.RedFgB(">"), k.Struct().PublicKeyPath)
 }
 
 // FilePointer - return a string that will represent the path the key can be
@@ -288,24 +281,34 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	return d, nil
 }
 
-// Sign ...
-func (k *key) Sign(digest []byte) (*big.Int, *big.Int, []byte, error) {
-	pKey, _ := k.getPrivateKey()
+// Sign - signs a hash (which should be the result of hashing a larger message)
+// using the private key, priv. If the hash is longer than the bit-length of the
+// private key's curve order, the hash will be truncated to that length.  It
+// returns the signature as a pair of integers. The security of the private key
+// depends on the entropy of rand.
+//
+func (k *key) Sign(digest []byte) (*ecdsaSignature, error) {
+	pKey, err := k.getPrivateKey()
+	if err != nil {
+		return (*ecdsaSignature)(nil), err
+	}
 
  	r, s, err := ecdsa.Sign(crypto.Reader, pKey, digest)
  	if err != nil {
- 		return (*big.Int)(nil), (*big.Int)(nil), nil, err
+ 		return (*ecdsaSignature)(nil), err
  	}
 
-	sig := r.Bytes()
-	sig = append(sig, s.Bytes()...)
-
-	return r, s, sig, nil
+	return &ecdsaSignature{
+		R: r,
+		S: s,
+	}, nil
 }
 
-// Verify ...
-func (k *key) Verify(publicKey *ecdsa.PublicKey, hashed []byte, r, s *big.Int) bool {
-	return true;
+// Verify - verifies the signature in r, s of hash using the public key, pub. Its
+// return value records whether the signature is valid.
+//
+func (k *key) Verify(pub *ecdsa.PublicKey, hash []byte, sig *ecdsaSignature) bool {
+	return ecdsa.Verify(pub, hash, sig.R, sig.S)
 }
 
 // Struct - return the full object for access to non exported fields
@@ -499,4 +502,20 @@ func keyFromGOB64(str string) (*key, error) {
 	}
 
 	return k, nil
+}
+
+// PrintKey - helper function to print a key
+func PrintKey(k *key, l *logrus.Logger) {
+	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
+	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
+	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
+	l.Infof("Key KeySize: %s", helpers.RedFgB(k.Struct().KeySize))
+	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
+	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
+	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
+	l.Infof("	%s privateKey: %s......",helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
+	l.Infof("	%s publicKey:  %s......",helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
+	l.Infof("	%s privatePemPath: %s",helpers.RedFgB(">"), k.Struct().PrivatePemPath)
+	l.Infof("	%s privateKeyPath: %s",helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
+	l.Infof("	%s publicKeyPath:  %s",helpers.RedFgB(">"), k.Struct().PublicKeyPath)
 }

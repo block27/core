@@ -3,6 +3,7 @@ package keys
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"regexp"
@@ -151,6 +152,98 @@ func BenchmarkSignP521(b *testing.B) {
 	})
 }
 
+func BenchmarkVerifyP224(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-224", 224)
+	if err != nil {
+		b.Fail()
+	}
+
+	sig, _ := k.Sign(hashed)
+	p, _ := k.getPublicKey()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if !k.Verify(p, hashed, sig) {
+				b.Fail()
+			}
+		}
+	})
+}
+
+func BenchmarkVerifyP256(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-256", 256)
+	if err != nil {
+		b.Fail()
+	}
+
+	sig, _ := k.Sign(hashed)
+	p, _ := k.getPublicKey()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if !k.Verify(p, hashed, sig) {
+				b.Fail()
+			}
+		}
+	})
+}
+
+func BenchmarkVerifyP384(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-384", 384)
+	if err != nil {
+		b.Fail()
+	}
+
+	sig, _ := k.Sign(hashed)
+	p, _ := k.getPublicKey()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if !k.Verify(p, hashed, sig) {
+				b.Fail()
+			}
+		}
+	})
+}
+
+func BenchmarkVerifyP521(b *testing.B) {
+	b.ResetTimer()
+	hashed := []byte("testing")
+
+	k, err := NewECDSA(Config, "test-key-521", 521)
+	if err != nil {
+		b.Fail()
+	}
+
+	sig, _ := k.Sign(hashed)
+	p, _ := k.getPublicKey()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if !k.Verify(p, hashed, sig) {
+				b.Fail()
+			}
+		}
+	})
+}
+
 func TestNewECDSABlank(t *testing.T) {
 	result, err := NewECDSABlank(Config)
 	if err != nil {
@@ -207,20 +300,45 @@ func TestFilePointer(t *testing.T) {
 	}
 }
 
+func TestSignandVerifyHuman(t *testing.T)  {
+	msg := "hello, world"
+	hash := sha256.Sum256([]byte(msg))
+
+	sig, err := Key.Sign(hash[:])
+	if err != nil {
+		t.Fail()
+	}
+
+	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+
+	pub, err := Key.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	valid := Key.Verify(pub, hash[:], sig)
+	fmt.Println("signature verified:", valid)
+}
+
 func TestSignAndVerify(t *testing.T) {
 	hashed := []byte("testing")
 
-	r, s, _, err := Key.Sign(hashed)
+	sig, err := Key.Sign(hashed)
 	if err != nil {
 		t.Fail()
 	}
 
-	publicKey, err := Key.getPublicKey()
+	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+
+	pub, err := Key.getPublicKey()
 	if err != nil {
 		t.Fail()
 	}
 
-	if !Key.Verify(publicKey, hashed, r, s) {
+	valid := Key.Verify(pub, hashed[:], sig)
+	fmt.Println("signature verified:", valid)
+
+	if !valid {
 		t.Fail()
 	}
 }
@@ -309,6 +427,22 @@ func checkFields(original *key, copied *key) error {
 		return fmt.Errorf("failed[GID]")
 	}
 
+	if original.Name != copied.Name {
+		return fmt.Errorf("failed[Name]")
+	}
+
+	if original.Slug != copied.Slug {
+		return fmt.Errorf("failed[Slug]")
+	}
+
+	if original.Status != copied.Status {
+		return fmt.Errorf("failed[Status]")
+	}
+
+	if original.KeySize != copied.KeySize {
+		return fmt.Errorf("failed[KeySize]")
+	}
+
 	if original.FingerprintSHA != copied.FingerprintSHA {
 		return fmt.Errorf("failed[FingerprintSHA]")
 	}
@@ -323,6 +457,10 @@ func checkFields(original *key, copied *key) error {
 
 	if original.PublicKeyB64 != copied.PublicKeyB64 {
 		return fmt.Errorf("failed[PublicKeyB64]")
+	}
+
+	if original.PublicKeyPath != copied.PublicKeyPath {
+		return fmt.Errorf("failed[PublicKeyPath]")
 	}
 
 	if original.PrivateKeyPath != copied.PrivateKeyPath {
