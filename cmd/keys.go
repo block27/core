@@ -1,6 +1,7 @@
 package cmd
 
 import (
+  "errors"
   "fmt"
 
 	h "github.com/amanelis/bespin/helpers"
@@ -21,7 +22,13 @@ func init() {
 
 var keysCmd = &cobra.Command{
   Use:   "keys",
-  Short: "API for ECDSA key service",
+  Args: func(cmd *cobra.Command, args []string) error {
+    if len(args) < 1 {
+      return errors.New(fmt.Sprintf("%s", h.RedFgB("requires an argument")))
+    }
+
+    return nil
+  },
   Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("keys")
   },
@@ -29,7 +36,7 @@ var keysCmd = &cobra.Command{
 
 var keysCreateCmd = &cobra.Command{
   Use:   "create",
-  Short: "Create new ECDSA key pairs",
+  Short: "Create new key pairs",
   PreRun: func(cmd *cobra.Command, args []string) {
     B.L.Printf("%s", h.CyanFgB("Keys[CREATE]"))
   },
@@ -45,7 +52,7 @@ var keysCreateCmd = &cobra.Command{
 
 var keysGetCmd = &cobra.Command{
   Use:   "get",
-  Short: "Get a single key by it's identifier",
+  Short: "Get key by identifier",
   PreRun: func(cmd *cobra.Command, args []string) {
     B.L.Printf("%s", h.CyanFgB("Keys[GET]"))
   },

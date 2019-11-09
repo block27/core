@@ -52,7 +52,8 @@ func TestNewECDSABlank(t *testing.T) {
 	assert.Equal(t, result.Struct().Slug, "")
 	assert.Equal(t, result.Struct().Status, "")
 	assert.Equal(t, result.Struct().KeySize, 0)
-	assert.Equal(t, result.Struct().Fingerprint, "")
+	assert.Equal(t, result.Struct().FingerprintMD5, "")
+	assert.Equal(t, result.Struct().FingerprintSHA, "")
 }
 
 func TestGetECDSA(t *testing.T) {
@@ -62,7 +63,8 @@ func TestGetECDSA(t *testing.T) {
 	}
 
 	assert.NotNil(t, result.Struct().GID)
-	assert.NotNil(t, result.Struct().Fingerprint)
+	assert.NotNil(t, result.Struct().FingerprintMD5)
+	assert.NotNil(t, result.Struct().FingerprintSHA)
 }
 
 func TestListECDSA(t *testing.T) {
@@ -81,11 +83,6 @@ func TestListECDSA(t *testing.T) {
 	}
 }
 
-func TestStruct(t *testing.T) {
-	assert.NotNil(t, Key.Struct().GID)
-	assert.NotNil(t, Key.Struct().Fingerprint)
-}
-
 func TestGenerateUUID(t *testing.T) {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
 	if !r.MatchString(generateUUID().String()) {
@@ -98,6 +95,64 @@ func TestFilePointer(t *testing.T) {
 	if !r.MatchString(Key.FilePointer()) {
 		t.Fail()
 	}
+}
+
+func TestSignAndVerify(t *testing.T) {
+	hashed := []byte("testing")
+
+	r, s, _, err := Key.Sign(hashed)
+	if err != nil {
+		t.Fail()
+	}
+
+	publicKey, err := Key.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !Key.Verify(publicKey, hashed, r, s) {
+		t.Fail()
+	}
+}
+
+func TestPrintKey(t *testing.T) {
+	t.Skip()
+}
+
+func TestMarshall(t *testing.T) {
+	t.Skip()
+}
+
+func TestUnmarshall(t *testing.T) {
+	t.Skip()
+}
+
+func TestGetPrivateKey(t *testing.T) {
+	pKey, err := Key.getPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if pKey == nil {
+		t.Fail()
+	}
+}
+
+func TestGetPublicKey(t *testing.T) {
+	pKey, err := Key.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if pKey == nil {
+		t.Fail()
+	}
+}
+
+func TestStruct(t *testing.T) {
+	assert.NotNil(t, Key.Struct().GID)
+	assert.NotNil(t, Key.Struct().FingerprintMD5)
+	assert.NotNil(t, Key.Struct().FingerprintSHA)
 }
 
 func TestKeyToGOB64(t *testing.T) {
@@ -144,8 +199,12 @@ func checkFields(original *key, copied *key) error {
 		return fmt.Errorf("failed[GID]")
 	}
 
-	if original.Fingerprint != copied.Fingerprint {
-		return fmt.Errorf("failed[Fingerprint]")
+	if original.FingerprintSHA != copied.FingerprintSHA {
+		return fmt.Errorf("failed[FingerprintSHA]")
+	}
+
+	if original.FingerprintMD5 != copied.FingerprintMD5 {
+		return fmt.Errorf("failed[FingerprintMD5]")
 	}
 
 	if original.PrivateKeyB64 != copied.PrivateKeyB64 {

@@ -4,18 +4,25 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/sha256"
+	"crypto/md5"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/sirupsen/logrus"
 	guuid "github.com/google/uuid"
@@ -30,8 +37,14 @@ type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
 
+	getPrivateKey() (*ecdsa.PrivateKey, error)
+	getPublicKey() (*ecdsa.PublicKey, error)
+
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
+
+	Sign([]byte) (*big.Int, *big.Int, []byte, error)
+	Verify(*ecdsa.PublicKey, []byte, *big.Int, *big.Int) bool
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -45,7 +58,9 @@ type key struct {
 	Status string
 
 	KeySize int
-	Fingerprint string
+
+	FingerprintMD5 string
+	FingerprintSHA string
 
 	PublicKeyPath  string
 	PrivateKeyPath string
@@ -53,6 +68,9 @@ type key struct {
 
 	PublicKeyB64  string
 	PrivateKeyB64 string
+
+	privateKey *ecdsa.PrivateKey
+	publicKey *ecdsa.PublicKey
 }
 
 // NewECDSABlank - create a struct from a database object marshalled into obj
@@ -76,17 +94,15 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	pemKey, pemPub := encode(pri, pub)
 
 	key := &key{
-		GID:           generateUUID(),
-		Name:          name,
-		Slug:          helpers.NewHaikunator().Haikunate(),
-		KeySize:       pri.Params().BitSize,
-		Status:  			 statusActive,
-		PublicKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemPub)),
-		PrivateKeyB64: base64.StdEncoding.EncodeToString([]byte(pemKey)),
-		Fingerprint: fmt.Sprintf("%s%s",
-			pub.X.String()[0:12],
-			pub.Y.String()[0:12],
-		),
+		GID:            generateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeySize:        pri.Params().BitSize,
+		Status:  			  statusActive,
+		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
+		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
+		FingerprintMD5: fingerprintMD5(pub),
+		FingerprintSHA: fingerprintSHA256(pub),
 	}
 
 	// Create file paths which include the public keys curve as signature
@@ -103,20 +119,20 @@ func NewECDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	privatekeyFile, err := os.Create(key.PrivateKeyPath)
 	if err != nil {
 		return nil, err
-	} else {
-		privatekeyencoder := gob.NewEncoder(privatekeyFile)
-		privatekeyencoder.Encode(pri)
-		privatekeyFile.Close()
 	}
+
+	privatekeyencoder := gob.NewEncoder(privatekeyFile)
+	privatekeyencoder.Encode(pri)
+	privatekeyFile.Close()
 
 	publickeyFile, err := os.Create(key.PublicKeyPath)
 	if err != nil {
 		return nil, err
-	} else {
-		publickeyencoder := gob.NewEncoder(publickeyFile)
-		publickeyencoder.Encode(pub)
-		publickeyFile.Close()
 	}
+
+	publickeyencoder := gob.NewEncoder(publickeyFile)
+	publickeyencoder.Encode(pub)
+	publickeyFile.Close()
 
 	// Pem for private key
 	pemfile, err := os.Create(key.PrivatePemPath)
@@ -204,7 +220,9 @@ func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 
 // PrintKey - helper function to print a key
 func PrintKey(k *key, l *logrus.Logger) {
-	l.Infof("Key ID: %s", helpers.MagentaFgD(k.FilePointer()))
+	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
+	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
+	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
 	l.Infof("Key KeySize: %s", helpers.RedFgB(k.Struct().KeySize))
 	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
 	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
@@ -242,9 +260,58 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	return d, nil
 }
 
+// Sign ...
+func (k *key) Sign(digest []byte) (*big.Int, *big.Int, []byte, error) {
+	pKey, _ := k.getPrivateKey()
+
+ 	r, s, err := ecdsa.Sign(crypto.Reader, pKey, digest)
+ 	if err != nil {
+ 		return (*big.Int)(nil), (*big.Int)(nil), nil, err
+ 	}
+
+	sig := r.Bytes()
+	sig = append(sig, s.Bytes()...)
+
+	return r, s, sig, nil
+}
+
+// Verify ...
+func (k *key) Verify(publicKey *ecdsa.PublicKey, hashed []byte, r, s *big.Int) bool {
+	return true;
+}
+
 // Struct - return the full object for access to non exported fields
 func (k *key) Struct() *key {
 	return k
+}
+
+// getPrivateKey ...
+func (k *key) getPrivateKey() (*ecdsa.PrivateKey, error) {
+	by, err := base64.StdEncoding.DecodeString(k.PrivateKeyB64)
+	if err != nil {
+		return (*ecdsa.PrivateKey)(nil), err
+	}
+
+	block, _ := pem.Decode([]byte(by))
+  x509Encoded := block.Bytes
+  tempKey, _ := x509.ParseECPrivateKey(x509Encoded)
+
+	return tempKey, nil
+}
+
+// getPublicKey ...
+func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
+	by, err := base64.StdEncoding.DecodeString(k.PublicKeyB64)
+	if err != nil {
+		return (*ecdsa.PublicKey)(nil), err
+	}
+
+	blockPub, _ := pem.Decode([]byte(by))
+  x509EncodedPub := blockPub.Bytes
+  genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+  publicKey := genericPublicKey.(*ecdsa.PublicKey)
+
+	return publicKey, nil
 }
 
 // generateUUID - generate and return a valid GUUID
@@ -313,6 +380,40 @@ func exportPrivateKeytoEncryptedPEM(sec *ecdsa.PrivateKey, password []byte) []by
 	pem.Encode(keypem, &pem.Block{Type: "EC PRIVATE KEY", Bytes: l})
 
 	return n
+}
+
+// Fingerprinting
+// -----------------------------------------------------------------------------
+// ssh-keygen -l -E md5 -f ~/.ssh/id_rsa.pub
+// 2048 MD5:44:91:e0:e3:64:1e:38:6e:24:7e:40:09:a3:42:2f:84 shaman@shaman.local (RSA)
+// ssh-keygen -l -v -f ~/.ssh/id_rsa.pub
+// 2048 SHA256:JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54 shaman@shaman.local
+//
+// awk '{print $2}' ~/.ssh/id_rsa.pub | base64 -D | sha256sum -b | sed 's/ .*$//' | xxd -r -p | base64
+// JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54=
+// -----------------------------------------------------------------------------
+
+// fingerprintMD5 - returns the user presentation of the key's fingerprint
+// as described by RFC 4716 section 4.
+func fingerprintMD5(publicKey *ecdsa.PublicKey) string {
+	md5sum := md5.Sum(ssh.Marshal(publicKey))
+	hexarray := make([]string, len(md5sum))
+
+	for i, c := range md5sum {
+		hexarray[i] = hex.EncodeToString([]byte{c})
+	}
+
+	return strings.Join(hexarray, ":")
+}
+
+// fingerprintSHA256 - returns the user presentation of the key's fingerprint as
+// unpadded base64 encoded sha256 hash. This format was introduced from
+// OpenSSH 6.8.
+// https://www.openssh.com/txt/release-6.8
+// https://tools.ietf.org/html/rfc4648#section-3.2 (unpadded base64 encoding)
+func fingerprintSHA256(publicKey *ecdsa.PublicKey) string {
+	sha256sum := sha256.Sum256(ssh.Marshal(publicKey))
+	return base64.RawStdEncoding.EncodeToString(sha256sum[:])
 }
 
 // encode ...

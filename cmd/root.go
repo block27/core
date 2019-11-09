@@ -1,19 +1,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/amanelis/bespin/backend"
+	"github.com/amanelis/bespin/helpers"
 )
 
 var (
-	cfgFile     string
+	cfgFile 		string
 	userLicense string
 
+	// B - main backend interface that holds all functionality
 	B *backend.Backend
 
 	rootCmd = &cobra.Command{
 		Use:   "sigma",
-		Short: "SigmaInc, HSM key generation, signing and AES encrypt/decrypt",
+		Short: fmt.Sprintf("%s: ECDSA/RSA key generation, signing, AES encrypt/decrypt, and secure backup", helpers.GreenFgB("Sigma CLI")),
+		Run: func(cmd *cobra.Command, args []string) {
+			B.Welcome()
+		},
 	}
 )
 

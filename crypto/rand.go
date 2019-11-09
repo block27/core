@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	devices = map[string]string{
+	// Devices ...
+	Devices = map[string]string{
 		"test": "/dev/trandom",
 		"darwin": "/dev/urandom",
 		"linux":  "/dev/TrueRNG",
@@ -19,7 +20,7 @@ var (
 var Reader io.Reader
 
 func init() {
-	Reader = &devReader{name: devices[runtime.GOOS]}
+	Reader = &devReader{name: Devices[runtime.GOOS]}
 }
 
 // devReader - satisfies reads by reading the file named name.

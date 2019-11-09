@@ -18,6 +18,9 @@ endif
 
 all: configuration
 
+build:
+	go build -o bin/sigma-cli main.go
+
 configuration:
 	@echo "---------------------------------------------------------------------"
 	@echo "${MAG}ENV${RES}[${RL1}KEY${RES}]: \t[${GRE}${KEY}${RES}]"
@@ -26,8 +29,12 @@ configuration:
 	@echo "${CYN}EXT${RES}[${BL1}IV${RES}]: \t[${GRE}$(shell cat /var/data/iv)${RES}]"
 	@echo "---------------------------------------------------------------------"
 
+ctags:
+	@echo "Generating application ctags..."
+	@gotags -tag-relative=true -R=true -sort=true -f="tags" -fields=+l .
+
 run:
-	@go build && ./bespin
+	@go run main.go
 
 prepare_tests:
 	@rm -rf /tmp/var/keys/* || true
