@@ -66,7 +66,7 @@ type key struct {
 	Status string
 
 	// Basically the elliptic curve size of the key
-	KeySize uint16
+	KeySize int
 	KeyType string
 
 	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
@@ -90,15 +90,12 @@ type key struct {
 // ecdsaSignature - just used to hold a signature and pass around a bit nicer
 //
 type ecdsaSignature struct {
+	// Standard resulting signature values
 	R, S *big.Int
-}
 
-// NewECDSASignature ...
-func NewECDSASignature(r, s *big.Int) *ecdsaSignature {
-	return &ecdsaSignature{
-		R: r,
-		S: s,
-	}
+	// MD5/SHA for continuity purposes down the road.
+	SHA [32]byte
+	MD5 [16]byte
 }
 
 // NewECDSABlank - create a struct from a database object marshalled into obj
@@ -110,7 +107,7 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 // NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
-func NewECDSA(c config.ConfigReader, name string, size uint16) (KeyAPI, error) {
+func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
 	var curve elliptic.Curve
@@ -146,7 +143,7 @@ func NewECDSA(c config.ConfigReader, name string, size uint16) (KeyAPI, error) {
 		GID:            generateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeySize:        uint16(pri.Params().BitSize),
+		KeySize:        pri.Params().BitSize,
 		KeyType:        "ecdsa.PrivateKey",
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
@@ -307,20 +304,22 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 // returns the signature as a pair of integers. The security of the private key
 // depends on the entropy of rand.
 //
-func (k *key) Sign(digest []byte) (*ecdsaSignature, error) {
+func (k *key) Sign(data []byte) (*ecdsaSignature, error) {
 	pKey, err := k.getPrivateKey()
 	if err != nil {
 		return (*ecdsaSignature)(nil), err
 	}
 
-	r, s, err := ecdsa.Sign(crypto.Reader, pKey, digest)
+	r, s, err := ecdsa.Sign(crypto.Reader, pKey, data)
 	if err != nil {
 		return (*ecdsaSignature)(nil), err
 	}
 
 	return &ecdsaSignature{
-		R: r,
-		S: s,
+		R:   r,
+		S:   s,
+		MD5: md5.Sum(data),
+		SHA: sha256.Sum256(data),
 	}, nil
 }
 

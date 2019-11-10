@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	h "github.com/amanelis/bespin/helpers"
@@ -14,7 +14,7 @@ var (
 	// Create flags ...
 	createName string
 	createType string
-	createSize uint16
+	createSize int
 
 	// List flags ...
 	// ...
@@ -31,7 +31,7 @@ func init() {
 	// Create flags ...
 	keysCreateCmd.Flags().StringVarP(&createName, "name", "n", "", "name required")
 	keysCreateCmd.Flags().StringVarP(&createType, "type", "t", "ecdsa", "type")
-	keysCreateCmd.Flags().Uint16VarP(&createSize, "size", "s", 256, "size")
+	keysCreateCmd.Flags().IntVarP(&createSize, "size", "s", 256, "size")
 	keysCreateCmd.MarkFlagRequired("name")
 
 	// Get flags ...
@@ -124,16 +124,16 @@ var keysSignCmd = &cobra.Command{
 		}
 
 		dataR := h.ReadBinary(signFilePath)
-		dataH := sha256.Sum256(dataR)
-
-		fmt.Printf("SHA256(%s)= %x\n", signFilePath, dataH)
 
 		sig, err := key.Sign(dataR)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("Signature: \n\tr=0x%x \n\ts=0x%x\n", sig.R, sig.S)
-		fmt.Printf("Verified: %t\n", key.Verify(dataR, sig))
+		B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA)
+		B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
+
+		B.L.Printf("Signature: \n\t\tr=0x%x \n\t\ts=0x%x", sig.R, sig.S)
+		B.L.Printf("Verified: \n\t\t%t", key.Verify(dataR, sig))
 	},
 }
