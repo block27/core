@@ -14,8 +14,9 @@ func ASCIIBytesToPrintString(b []byte) string {
 		if v <= unicode.MaxASCII && unicode.IsPrint(rune(v)) {
 			r = append(r, v)
 		} else {
-			r = append(r, '*') // At least I didn't pick `:poop:`.
+			r = append(r, '*')
 		}
 	}
+
 	return string(r)
 }

@@ -298,6 +298,13 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	return d, nil
 }
 
+// Struct - return the full object for access to non exported fields, not sure
+// about this, but fine for now... think of a better way to implement such need,
+// perhaps just using attribute getters will suffice...
+func (k *key) Struct() *key {
+	return k
+}
+
 // Sign - signs a hash (which should be the result of hashing a larger message)
 // using the private key, priv. If the hash is longer than the bit-length of the
 // private key's curve order, the hash will be truncated to that length.  It
@@ -333,13 +340,6 @@ func (k *key) Verify(hash []byte, sig *ecdsaSignature) bool {
 	}
 
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
-}
-
-// Struct - return the full object for access to non exported fields, not sure
-// about this, but fine for now... think of a better way to implement such need,
-// perhaps just using attribute getters will suffice...
-func (k *key) Struct() *key {
-	return k
 }
 
 // getPrivateKey ...

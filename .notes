@@ -33,3 +33,7 @@ if err := b.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64)); err != nil {
 //
 // awk '{print $2}' ~/.ssh/id_rsa.pub | base64 -D | sha256sum -b | sed 's/ .*$//' | xxd -r -p | base64
 // JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54=
+
+
+// Multisignature scheme
+https://github.com/bford/golang-x-crypto/blob/master/ed25519/cosi/example_test.go

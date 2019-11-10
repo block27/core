@@ -34,6 +34,10 @@ type Backend struct {
 	L *logrus.Logger
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 // NewBackend - factory method for producing a new type of Backend
 func NewBackend() (*Backend, error) {
 	c, err := config.LoadConfig(config.ConfigDefaults)
@@ -210,23 +214,21 @@ func (b *Backend) Welcome() {
 		h.CyanFgB("----------------------------------------------------------------"))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Arch"), h.WhiteFgB(runtime.GOARCH))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Compiler"), h.WhiteFgB(runtime.Compiler))
+	fmt.Printf("%s: \t%s\n", h.GreenFgB("- CPUS"), h.WhiteFgB(runtime.NumCPU()))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Crypto"), h.WhiteFgB(crypto.Devices[runtime.GOOS]))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Runtime"), h.WhiteFgB(runtime.GOOS))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Mode"), h.WhiteFgB("dev"))
+
+	fmt.Printf("%s: \t%s\n", h.GreenFgB("- EntropyA"), h.WhiteFgB(0))
+	fmt.Printf("%s: \t%s\n", h.GreenFgB("- EntropyP"), h.WhiteFgB(0))
 	fmt.Printf("%s\n",
 		h.CyanFgB("----------------------------------------------------------------"))
 }
 
 func newSpinner() *spinner.Spinner {
-	rand.Seed(time.Now().UnixNano())
-	var min, max int
-
-	// min, max = 0, 43
-	// ndxNum := rand.Intn(max-min+1) + min
-
 	s := spinner.New(spinner.CharSets[21], 75*time.Millisecond) //21, 15, 14
 
-	min, max = 0, 5
+	min, max := 0, len(h.Colors)-1
 	ndxCol := rand.Intn(max-min+1) + min
 
 	s.Color(h.Colors[ndxCol], "bold")
