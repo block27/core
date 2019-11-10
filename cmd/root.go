@@ -3,13 +3,13 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/amanelis/bespin/backend"
 	"github.com/amanelis/bespin/helpers"
+	"github.com/spf13/cobra"
 )
 
 var (
-	cfgFile 		string
+	cfgFile     string
 	userLicense string
 
 	// B - main backend interface that holds all functionality
@@ -41,6 +41,7 @@ func init() {
 	keysCmd.AddCommand(keysCreateCmd)
 	keysCmd.AddCommand(keysGetCmd)
 	keysCmd.AddCommand(keysListCmd)
+	keysCmd.AddCommand(keysSignCmd)
 }
 
 func initConfig() {

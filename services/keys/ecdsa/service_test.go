@@ -162,13 +162,12 @@ func BenchmarkVerifyP224(b *testing.B) {
 	}
 
 	sig, _ := k.Sign(hashed)
-	p, _ := k.getPublicKey()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if !k.Verify(p, hashed, sig) {
+			if !k.Verify(hashed, sig) {
 				b.Fail()
 			}
 		}
@@ -185,13 +184,12 @@ func BenchmarkVerifyP256(b *testing.B) {
 	}
 
 	sig, _ := k.Sign(hashed)
-	p, _ := k.getPublicKey()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if !k.Verify(p, hashed, sig) {
+			if !k.Verify(hashed, sig) {
 				b.Fail()
 			}
 		}
@@ -208,13 +206,12 @@ func BenchmarkVerifyP384(b *testing.B) {
 	}
 
 	sig, _ := k.Sign(hashed)
-	p, _ := k.getPublicKey()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if !k.Verify(p, hashed, sig) {
+			if !k.Verify(hashed, sig) {
 				b.Fail()
 			}
 		}
@@ -231,13 +228,12 @@ func BenchmarkVerifyP521(b *testing.B) {
 	}
 
 	sig, _ := k.Sign(hashed)
-	p, _ := k.getPublicKey()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if !k.Verify(p, hashed, sig) {
+			if !k.Verify(hashed, sig) {
 				b.Fail()
 			}
 		}
@@ -300,7 +296,7 @@ func TestFilePointer(t *testing.T) {
 	}
 }
 
-func TestSignandVerifyHuman(t *testing.T)  {
+func TestSignandVerifyHuman(t *testing.T) {
 	msg := "hello, world"
 	hash := sha256.Sum256([]byte(msg))
 
@@ -311,12 +307,7 @@ func TestSignandVerifyHuman(t *testing.T)  {
 
 	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
-	pub, err := Key.getPublicKey()
-	if err != nil {
-		t.Fail()
-	}
-
-	valid := Key.Verify(pub, hash[:], sig)
+	valid := Key.Verify(hash[:], sig)
 	fmt.Println("signature verified:", valid)
 }
 
@@ -330,12 +321,7 @@ func TestSignAndVerify(t *testing.T) {
 
 	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
-	pub, err := Key.getPublicKey()
-	if err != nil {
-		t.Fail()
-	}
-
-	valid := Key.Verify(pub, hashed[:], sig)
+	valid := Key.Verify(hashed[:], sig)
 	fmt.Println("signature verified:", valid)
 
 	if !valid {

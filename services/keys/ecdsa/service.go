@@ -46,7 +46,7 @@ type KeyAPI interface {
 	Unmarshall(string) (KeyAPI, error)
 
 	Sign([]byte) (*ecdsaSignature, error)
-	Verify(*ecdsa.PublicKey, []byte, *ecdsaSignature) bool
+	Verify([]byte, *ecdsaSignature) bool
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -66,7 +66,8 @@ type key struct {
 	Status string
 
 	// Basically the elliptic curve size of the key
-	KeySize int
+	KeySize uint16
+	KeyType string
 
 	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
 	FingerprintSHA string // Real fingerprint in  SHA256  of the key
@@ -92,6 +93,14 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
+// NewECDSASignature ...
+func NewECDSASignature(r, s *big.Int) *ecdsaSignature {
+	return &ecdsaSignature{
+		R: r,
+		S: s,
+	}
+}
+
 // NewECDSABlank - create a struct from a database object marshalled into obj
 //
 func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
@@ -101,7 +110,7 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 // NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
-func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
+func NewECDSA(c config.ConfigReader, name string, size uint16) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
 	var curve elliptic.Curve
@@ -118,7 +127,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	case 521:
 		curve = elliptic.P521()
 	default:
-		return nil, fmt.Errorf("incorrect curve size passed")
+		return nil, fmt.Errorf("%s", helpers.RedFgB("incorrect curve size passed"))
 	}
 
 	pri, err := ecdsa.GenerateKey(curve, crypto.Reader)
@@ -137,7 +146,8 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		GID:            generateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeySize:        pri.Params().BitSize,
+		KeySize:        uint16(pri.Params().BitSize),
+		KeyType:        "ecdsa.PrivateKey",
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
@@ -317,7 +327,12 @@ func (k *key) Sign(digest []byte) (*ecdsaSignature, error) {
 // Verify - verifies the signature in r, s of hash using the public key, pub. Its
 // return value records whether the signature is valid.
 //
-func (k *key) Verify(pub *ecdsa.PublicKey, hash []byte, sig *ecdsaSignature) bool {
+func (k *key) Verify(hash []byte, sig *ecdsaSignature) bool {
+	pub, err := k.getPublicKey()
+	if err != nil {
+		panic(err)
+	}
+
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
 }
 
@@ -521,7 +536,8 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
 	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
 	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key KeySize: %s", helpers.RedFgB(k.Struct().KeySize))
+	l.Infof("Key Size: %s", helpers.RedFgB(k.Struct().KeySize))
+	l.Infof("Key Type: %s", helpers.RedFgB(k.Struct().KeyType))
 	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
 	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
 	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))

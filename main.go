@@ -13,12 +13,10 @@ func main() {
 	defer b.D.Close()
 
 	// Get and check credentials, speed is subjective to the serial comm
-	if err := b.ValidateKeys(); err !=nil {
+	if err := b.ValidateKeys(); err != nil {
 		panic(err)
 	}
 
 	// Start the CLI / error if fails
-	if err := c.Execute(b); err !=nil {
-		panic(err)
-	}
+	c.Execute(b)
 }

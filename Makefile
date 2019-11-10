@@ -18,6 +18,10 @@ endif
 
 all: configuration
 
+# Aliases
+b: build
+t: test
+
 build:
 	go build -o bin/sigma-cli main.go
 
@@ -32,6 +36,9 @@ configuration:
 ctags:
 	@echo "Generating application ctags..."
 	@gotags -tag-relative=true -R=true -sort=true -f="tags" -fields=+l .
+
+lint:
+	golint ./...
 
 run:
 	@go run main.go

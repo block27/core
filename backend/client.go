@@ -1,19 +1,25 @@
 package backend
 
-
 import (
 	"fmt"
+	"math/rand"
 	"runtime"
 	"time"
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
-	"github.com/amanelis/bespin/services/bbolt"
 	h "github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/services/bbolt"
 	"github.com/amanelis/bespin/services/serial"
 
 	"github.com/briandowns/spinner"
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	// AESDevice - crypto key/iv provider.
+	//
+	AESDevice = "/dev/tty.usbmodem2002140"
 )
 
 // Backend - main struct for the entire application configuration
@@ -67,12 +73,12 @@ func NewBackend() (*Backend, error) {
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
 func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	if !h.FileExists("/dev/tty.usbmodem20021401") {
+	if !h.FileExists(AESDevice) {
 		return nil, fmt.Errorf("%s",
 			h.RedFgB("missing hardware AES device, cannot continue"))
 	}
 
-	c := serial.NewSerial("/dev/tty.usbmodem20021401", 115200)
+	c := serial.NewSerial(AESDevice, 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
@@ -81,7 +87,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 	})
 
 	if ke != nil {
-		return  nil, ke
+		return nil, ke
 	}
 
 	// Request IV
@@ -111,8 +117,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
 func (b *Backend) ValidateKeys() error {
-	s := spinner.New(spinner.CharSets[27], 75*time.Millisecond)
-	s.Color("green", "bold")
+	s := newSpinner()
 	s.Start()
 
 	fmt.Printf("Begining AES hardware authentication...\n")
@@ -205,10 +210,26 @@ func (b *Backend) Welcome() {
 		h.CyanFgB("----------------------------------------------------------------"))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Arch"), h.WhiteFgB(runtime.GOARCH))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Compiler"), h.WhiteFgB(runtime.Compiler))
-	// fmt.Printf("%s: \t%d\n", h.GreenFgB("- CPUs"), runtime.NumCPU())
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Crypto"), h.WhiteFgB(crypto.Devices[runtime.GOOS]))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Runtime"), h.WhiteFgB(runtime.GOOS))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Mode"), h.WhiteFgB("dev"))
 	fmt.Printf("%s\n",
 		h.CyanFgB("----------------------------------------------------------------"))
+}
+
+func newSpinner() *spinner.Spinner {
+	rand.Seed(time.Now().UnixNano())
+	var min, max int
+
+	// min, max = 0, 43
+	// ndxNum := rand.Intn(max-min+1) + min
+
+	s := spinner.New(spinner.CharSets[21], 75*time.Millisecond) //21, 15, 14
+
+	min, max = 0, 5
+	ndxCol := rand.Intn(max-min+1) + min
+
+	s.Color(h.Colors[ndxCol], "bold")
+
+	return s
 }

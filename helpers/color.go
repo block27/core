@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	// Colors - to be used in spinner, randomize them
+	Colors = []string{"fgRed", "fgGreen", "fgYellow", "fgBlue", "fgMagenta", "fgCyan"}
+
 	// CyanFgB ...
 	CyanFgB = color.New(color.FgHiCyan, color.Bold).SprintFunc()
 
@@ -35,11 +38,9 @@ var (
 	// WhiteFgB ...
 	WhiteFgB = color.New(color.FgWhite, color.Bold).SprintFunc()
 
-
 	// YellowFgD ...
 	YellowFgD = color.New(color.FgYellow).SprintFunc()
 
 	// YellowFgB ...
 	YellowFgB = color.New(color.FgYellow, color.Bold).SprintFunc()
-
 )

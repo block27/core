@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	// Devices ...
+	// Devices ... each OS we use will have a different PRNG device,
+	// load based on OS.
+	//
 	Devices = map[string]string{
 		"test":   "/dev/trandom",
 		"darwin": "/dev/urandom",
@@ -17,13 +19,20 @@ var (
 	}
 )
 
+// Reader - Main interface that can be passed to almost all Golang crypto
+// implementations.
+//
 var Reader io.Reader
 
+// init - initialize the Reader with the most effective system based
+// rand generator.
+//
 func init() {
 	Reader = &devReader{name: Devices[runtime.GOOS]}
 }
 
 // devReader - satisfies reads by reading the file named name.
+//
 type devReader struct {
 	name string
 	f    io.Reader
@@ -31,11 +40,9 @@ type devReader struct {
 	used int32
 }
 
-// Read ...
-// func (r *devReader) Read(buf []byte) (n int, err error) {
-// 	return 0, nil
-// }
-
+// Read - base read implementation for the reader. We here set our own rand
+// device based on the init/os above.
+//
 func (r *devReader) Read(b []byte) (n int, err error) {
 	// if atomic.CompareAndSwapInt32(&r.used, 0, 1) {
 	// 	// First use of randomness. Start timer to warn about

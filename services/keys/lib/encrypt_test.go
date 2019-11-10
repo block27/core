@@ -57,7 +57,7 @@ func BenchmarkAESGCM(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	data, err := ioutil.ReadFile("../../testdata/big")
+	data, err := ioutil.ReadFile("../../../testdata/big")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func BenchmarkSecretbox(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	data, err := ioutil.ReadFile("../../testdata/big")
+	data, err := ioutil.ReadFile("../../../testdata/big")
 	if err != nil {
 		b.Fatal(err)
 	}
