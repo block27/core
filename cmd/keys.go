@@ -130,10 +130,11 @@ var keysSignCmd = &cobra.Command{
 			panic(err)
 		}
 
-		B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA)
+		B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
 		B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
 
-		B.L.Printf("Signature: \n\t\tr=0x%x \n\t\ts=0x%x", sig.R, sig.S)
+		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
+			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 		B.L.Printf("Verified: \n\t\t%t", key.Verify(dataR, sig))
 	},
 }
