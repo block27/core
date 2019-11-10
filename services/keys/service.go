@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/sha256"
 	"crypto/md5"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
@@ -24,13 +24,13 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/sirupsen/logrus"
 	guuid "github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	statusActive 		= "active"
-	statusArchived 	= "archive"
+	statusActive   = "active"
+	statusArchived = "archive"
 )
 
 // KeyAPI ...
@@ -138,7 +138,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
 		KeySize:        pri.Params().BitSize,
-		Status:  			  statusActive,
+		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
 		FingerprintMD5: fingerprintMD5(pub),
@@ -245,20 +245,20 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 //
 func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
 	var keys []KeyAPI
 
-  for _, f := range files {
+	for _, f := range files {
 		_key, _err := GetECDSA(c, f.Name())
 		if _err != nil {
 			return nil, _err
 		}
 
 		keys = append(keys, _key)
-  }
+	}
 
 	return keys, nil
 }
@@ -303,10 +303,10 @@ func (k *key) Sign(digest []byte) (*ecdsaSignature, error) {
 		return (*ecdsaSignature)(nil), err
 	}
 
- 	r, s, err := ecdsa.Sign(crypto.Reader, pKey, digest)
- 	if err != nil {
- 		return (*ecdsaSignature)(nil), err
- 	}
+	r, s, err := ecdsa.Sign(crypto.Reader, pKey, digest)
+	if err != nil {
+		return (*ecdsaSignature)(nil), err
+	}
 
 	return &ecdsaSignature{
 		R: r,
@@ -336,8 +336,8 @@ func (k *key) getPrivateKey() (*ecdsa.PrivateKey, error) {
 	}
 
 	block, _ := pem.Decode([]byte(by))
-  x509Encoded := block.Bytes
-  tempKey, _ := x509.ParseECPrivateKey(x509Encoded)
+	x509Encoded := block.Bytes
+	tempKey, _ := x509.ParseECPrivateKey(x509Encoded)
 
 	return tempKey, nil
 }
@@ -350,9 +350,9 @@ func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	}
 
 	blockPub, _ := pem.Decode([]byte(by))
-  x509EncodedPub := blockPub.Bytes
-  genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
-  publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	x509EncodedPub := blockPub.Bytes
+	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+	publicKey := genericPublicKey.(*ecdsa.PublicKey)
 
 	return publicKey, nil
 }
@@ -525,9 +525,9 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
 	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
 	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
-	l.Infof("	%s privateKey: %s......",helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
-	l.Infof("	%s publicKey:  %s......",helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
-	l.Infof("	%s privatePemPath: %s",helpers.RedFgB(">"), k.Struct().PrivatePemPath)
-	l.Infof("	%s privateKeyPath: %s",helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
-	l.Infof("	%s publicKeyPath:  %s",helpers.RedFgB(">"), k.Struct().PublicKeyPath)
+	l.Infof("	%s privateKey: %s......", helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
+	l.Infof("	%s publicKey:  %s......", helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
+	l.Infof("	%s privatePemPath: %s", helpers.RedFgB(">"), k.Struct().PrivatePemPath)
+	l.Infof("	%s privateKeyPath: %s", helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
+	l.Infof("	%s publicKeyPath:  %s", helpers.RedFgB(">"), k.Struct().PublicKeyPath)
 }

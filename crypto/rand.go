@@ -11,7 +11,7 @@ import (
 var (
 	// Devices ...
 	Devices = map[string]string{
-		"test": "/dev/trandom",
+		"test":   "/dev/trandom",
 		"darwin": "/dev/urandom",
 		"linux":  "/dev/TrueRNG",
 	}
