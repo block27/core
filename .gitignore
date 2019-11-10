@@ -2,3 +2,4 @@ bin/
 bespin
 coverage.out
 tags
+testdata/

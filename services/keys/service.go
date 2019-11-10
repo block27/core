@@ -33,6 +33,8 @@ const (
 	statusArchived 	= "archive"
 )
 
+// KeyAPI ...
+//
 type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
@@ -49,6 +51,7 @@ type KeyAPI interface {
 
 // key - struct, main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
+//
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
@@ -83,11 +86,14 @@ type key struct {
 	publicKey  *ecdsa.PublicKey
 }
 
+// ecdsaSignature - just used to hold a signature and pass around a bit nicer
+//
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
 // NewECDSABlank - create a struct from a database object marshalled into obj
+//
 func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 	return &key{}, nil
 }
@@ -214,6 +220,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 
 // GetECDSA - fetch a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
+//
 func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
@@ -235,6 +242,7 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 
 // ListECDSA - returns a list of active keys stored on the local filesystem. Of
 // which are all encrypted via AES from the hardware block
+//
 func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
   if err != nil {
@@ -257,6 +265,7 @@ func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 
 // FilePointer - return a string that will represent the path the key can be
 // written to on the file system
+//
 func (k *key) FilePointer() string {
 	return k.GID.String()
 }
@@ -272,6 +281,7 @@ func (k *key) Marshall() (string, error) {
 }
 
 // Unmarshall ...
+//
 func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	d, err := keyFromGOB64(obj)
 	if err != nil {
@@ -311,7 +321,9 @@ func (k *key) Verify(pub *ecdsa.PublicKey, hash []byte, sig *ecdsaSignature) boo
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
 }
 
-// Struct - return the full object for access to non exported fields
+// Struct - return the full object for access to non exported fields, not sure
+// about this, but fine for now... think of a better way to implement such need,
+// perhaps just using attribute getters will suffice...
 func (k *key) Struct() *key {
 	return k
 }
