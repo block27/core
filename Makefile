@@ -37,11 +37,29 @@ ctags:
 	@echo "Generating application ctags..."
 	@gotags -tag-relative=true -R=true -sort=true -f="tags" -fields=+l .
 
+ecdsa_generate:
+	openssl ecparam -genkey -name secp256k1 -out privkey.pem
+	openssl ec -in privkey.pem -pubout -out pubkey.pem
+
+ecdsa_generate_rand:
+	# https://hexdocs.pm/jose/key-generation.html
+	openssl ecparam -name secp384r1 -rand xkcd221random.bin 2>/dev/null
+	openssl ecparam -name secp521r1 -genkey -noout -rand ~/1049376.bin -out ec-secp521r1.pem
+
+ecdsa_sign:
+	openssl dgst -sha1 -sign private.pem < file.data > signature.bin
+
+ecdsa_verify:
+	openssl dgst -ecdsa-with-SHA1 -verify public.pem -signature signature.bin file.data
+
 lint:
 	golint ./...
 
-run:
-	@go run main.go
+openssl_cpu_speed:
+	openssl speed -elapsed aes-128-cbc
+
+openssl_hardware_accelerated:
+	openssl speed -elapsed -evp aes-128-cbc
 
 prepare_tests:
 	@rm -rf /tmp/var/keys/* || true

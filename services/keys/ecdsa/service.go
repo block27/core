@@ -112,8 +112,8 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// generated from PRNG and hardware devices
 	var curve elliptic.Curve
 
-	// Binary 192, 224, 256, 384, and 521
-	// Prime 163, 233, 283, 409, and 571
+	// Binary 224, 256, 384, and 521
+	// Prime 233, 283, 409, and 571
 	switch size {
 	case 224:
 		curve = elliptic.P224()
@@ -476,7 +476,7 @@ func fingerprintSHA256(publicKey *ecdsa.PublicKey) string {
 // encode ...
 func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
 	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: x509Encoded})
 
 	x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
 	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})

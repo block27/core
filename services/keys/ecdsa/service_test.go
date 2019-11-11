@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -409,51 +410,51 @@ func TestKeyFromGOB64(t *testing.T) {
 }
 
 func checkFields(original *key, copied *key) error {
-	if original.GID != copied.Struct().GID {
+	if !reflect.DeepEqual(original.GID, copied.Struct().GID) {
 		return fmt.Errorf("failed[GID]")
 	}
 
-	if original.Name != copied.Name {
+	if !reflect.DeepEqual(original.Name, copied.Name) {
 		return fmt.Errorf("failed[Name]")
 	}
 
-	if original.Slug != copied.Slug {
+	if !reflect.DeepEqual(original.Slug, copied.Slug) {
 		return fmt.Errorf("failed[Slug]")
 	}
 
-	if original.Status != copied.Status {
+	if !reflect.DeepEqual(original.Status, copied.Status) {
 		return fmt.Errorf("failed[Status]")
 	}
 
-	if original.KeySize != copied.KeySize {
+	if !reflect.DeepEqual(original.KeySize, copied.KeySize) {
 		return fmt.Errorf("failed[KeySize]")
 	}
 
-	if original.FingerprintSHA != copied.FingerprintSHA {
+	if !reflect.DeepEqual(original.FingerprintSHA, copied.FingerprintSHA) {
 		return fmt.Errorf("failed[FingerprintSHA]")
 	}
 
-	if original.FingerprintMD5 != copied.FingerprintMD5 {
+	if !reflect.DeepEqual(original.FingerprintMD5, copied.FingerprintMD5) {
 		return fmt.Errorf("failed[FingerprintMD5]")
 	}
 
-	if original.PrivateKeyB64 != copied.PrivateKeyB64 {
+	if !reflect.DeepEqual(original.PrivateKeyB64, copied.PrivateKeyB64) {
 		return fmt.Errorf("failed[PrivateKeyB64]")
 	}
 
-	if original.PublicKeyB64 != copied.PublicKeyB64 {
+	if !reflect.DeepEqual(original.PublicKeyB64, copied.PublicKeyB64) {
 		return fmt.Errorf("failed[PublicKeyB64]")
 	}
 
-	if original.PublicKeyPath != copied.PublicKeyPath {
+	if !reflect.DeepEqual(original.PublicKeyPath, copied.PublicKeyPath) {
 		return fmt.Errorf("failed[PublicKeyPath]")
 	}
 
-	if original.PrivateKeyPath != copied.PrivateKeyPath {
+	if !reflect.DeepEqual(original.PrivateKeyPath, copied.PrivateKeyPath) {
 		return fmt.Errorf("failed[PrivateKeyPath]")
 	}
 
-	if original.PrivatePemPath != copied.PrivatePemPath {
+	if !reflect.DeepEqual(original.PrivatePemPath, copied.PrivatePemPath) {
 		return fmt.Errorf("failed[PrivatePemPath]")
 	}
 
