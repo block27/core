@@ -10,7 +10,7 @@ func init() {
 	e = NewEntropy()
 }
 
-func TestPing(t  *testing.T) {
+func TestPing(t *testing.T) {
 	result, _ := e.Ping()
 
 	if result != "pong" {
@@ -18,7 +18,7 @@ func TestPing(t  *testing.T) {
 	}
 }
 
-func TestPoolsize(t  *testing.T) {
+func TestPoolsize(t *testing.T) {
 	result, _ := e.PoolSize()
 
 	if result != 0 {

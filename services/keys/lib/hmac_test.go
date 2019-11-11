@@ -1,6 +1,5 @@
 package keys
 
-
 import (
 	"bytes"
 	"encoding/hex"

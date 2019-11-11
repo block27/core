@@ -1,6 +1,5 @@
 package keys
 
-
 import (
 	"crypto/hmac"
 	"crypto/rand"

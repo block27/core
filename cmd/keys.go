@@ -33,6 +33,7 @@ func init() {
 	keysCreateCmd.Flags().StringVarP(&createType, "type", "t", "ecdsa", "type")
 	keysCreateCmd.Flags().IntVarP(&createSize, "size", "s", 256, "size")
 	keysCreateCmd.MarkFlagRequired("name")
+	keysCreateCmd.MarkFlagRequired("type")
 
 	// Get flags ...
 	keysGetCmd.Flags().StringVarP(&getIdentifier, "identifier", "i", "", "identifier required")
@@ -104,9 +105,13 @@ var keysListCmd = &cobra.Command{
 			panic(err)
 		}
 
-		for _, f := range keys {
-			k.PrintKey(f.Struct(), B.L)
-			fmt.Println()
+		if len(keys) == 0 {
+			B.L.Printf("No keys available")
+		} else {
+			for _, f := range keys {
+				k.PrintKey(f.Struct(), B.L)
+				fmt.Println()
+			}
 		}
 	},
 }

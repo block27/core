@@ -48,7 +48,7 @@ var nouns = []string{
 	"smoke", "snow", "snowflake", "sound", "star", "sun", "sun", "sunset",
 	"surf", "term", "thunder", "tooth", "tree", "truth", "union", "unit",
 	"violet", "voice", "water", "waterfall", "wave", "wildflower", "wind", "wood",
-	"blockchain", "network", "chain", "crypto", "token", "bridge","contract",
+	"blockchain", "network", "chain", "crypto", "token", "bridge", "contract",
 	"transfer", "secure", "coin", "dapp", "fork", "gas", "merkle", "node", "nonce",
 	"stake", "proof", "oracle", "shard", "wallet",
 }
@@ -133,8 +133,6 @@ func (h *Haikunator) randomString(s []string) string {
 
 	return s[h.Random.Intn(size)]
 }
-
-
 
 // deleteEmpty deletes empty strings from slice
 func deleteEmpty(s ...string) []string {

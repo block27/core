@@ -23,7 +23,7 @@ func TestReadFile(t *testing.T) {
 		t.Fail()
 	}
 
-	if err !=nil {
+	if err != nil {
 		t.Fail()
 	}
 }

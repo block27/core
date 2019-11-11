@@ -12,9 +12,9 @@ type SerialAPI interface {
 }
 
 type Request struct {
-	Method 	string
-	Size 		int
-	Result 	[]byte
+	Method string
+	Size   int
+	Result []byte
 }
 
 type serialAPI struct {
@@ -32,9 +32,9 @@ func NewSerial(name string, baud int) SerialAPI {
 
 func (e *serialAPI) Request(params Request) ([]byte, error) {
 	s, err := serial.OpenPort(e.Config)
-  if err != nil {
-  	return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
 	bd := fmt.Sprintf("%s\r", params.Method)
 	rq, err := s.Write([]byte(bd))

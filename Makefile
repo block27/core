@@ -6,6 +6,16 @@ CYN=\033[0;36m
 RL1=\033[0;41m
 BL1=\033[0;44m
 
+GO_SRC_DIRS := $(shell \
+	find . -name "*.go" -not -path "./vendor/*" | \
+	xargs -I {} dirname {}  | \
+	uniq)
+
+GO_TEST_DIRS := $(shell \
+	find . -name "*_test.go" -not -path "./vendor/*" | \
+	xargs -I {} dirname {}  | \
+	uniq)
+
 # OK to be modified
 ENVIRONMENT?=develop
 NAMESPACE?=default
@@ -24,6 +34,10 @@ t: test
 
 build:
 	go build -o bin/sigma-cli main.go
+
+code_show:
+	@echo "SRC  = $(GO_SRC_DIRS)"
+	@echo "TEST = $(GO_TEST_DIRS)"
 
 configuration:
 	@echo "---------------------------------------------------------------------"
@@ -51,6 +65,9 @@ ecdsa_sign:
 
 ecdsa_verify:
 	openssl dgst -ecdsa-with-SHA1 -verify public.pem -signature signature.bin file.data
+
+install:
+	go install -v
 
 lint:
 	golint ./...
@@ -83,4 +100,4 @@ test_gotest: prepare_tests
 	@gotest -v ./... -cover -coverprofile=coverage.out -bench=.
 
 test_richgo: prepare_tests
-	@richgo test ./... -v -cover -coverprofile=coverage.out -bench=.
+	@richgo test -v ./... -cover -coverprofile=coverage.out -bench=.

@@ -53,9 +53,9 @@ func TestIv(t *testing.T) {
 func TestEncryptDecrypt(t *testing.T) {
 	// Test against a 9 sized block
 	r4, e4 := crypter.Encrypt([]byte(LoremIpsum))
-	if  e4 !=nil {
+	if e4 != nil {
 		t.Fail()
-	}  else {
+	} else {
 		d4, _ := crypter.Decrypt(r4)
 
 		if string(d4) != LoremIpsum {
@@ -65,9 +65,9 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	// Test against a 9 sized block
 	r3, e3 := crypter.Encrypt([]byte(Block9))
-	if  e3 !=nil {
+	if e3 != nil {
 		t.Fail()
-	}  else {
+	} else {
 		d3, _ := crypter.Decrypt(r3)
 
 		if string(d3) != Block9 {
@@ -77,9 +77,9 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	// Test against a 333 sized block
 	r2, e2 := crypter.Encrypt([]byte(Block333))
-	if  e2 !=nil {
+	if e2 != nil {
 		t.Fail()
-	}  else {
+	} else {
 		d2, _ := crypter.Decrypt(r2)
 
 		if string(d2) != Block333 {
@@ -89,9 +89,9 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	// Test against a 1024 sized block
 	r1, e1 := crypter.Encrypt([]byte(Block1024))
-	if  e1 !=nil {
+	if e1 != nil {
 		t.Fail()
-	}  else {
+	} else {
 		d1, _ := crypter.Decrypt(r1)
 
 		if string(d1) != Block1024 {

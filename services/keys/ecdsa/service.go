@@ -13,7 +13,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"strings"
 	"sync"
@@ -85,17 +84,6 @@ type key struct {
 	// publically accessible.  taste it.
 	privateKey *ecdsa.PrivateKey
 	publicKey  *ecdsa.PublicKey
-}
-
-// ecdsaSignature - just used to hold a signature and pass around a bit nicer
-//
-type ecdsaSignature struct {
-	// Standard resulting signature values
-	R, S *big.Int
-
-	// MD5/SHA for continuity purposes down the road.
-	SHA [32]byte
-	MD5 [16]byte
 }
 
 // NewECDSABlank - create a struct from a database object marshalled into obj
@@ -231,12 +219,12 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return (*key)(nil), err
+		return (*key)(nil), fmt.Errorf("%s", helpers.RedFgB("invalid key path"))
 	}
 
 	data, err := helpers.ReadFile(fmt.Sprintf("%s/obj.bin", dirPath))
 	if err != nil {
-		return (*key)(nil), err
+		return (*key)(nil), fmt.Errorf("%s", helpers.RedFgB("invalid key object"))
 	}
 
 	obj, err := keyFromGOB64(data)
