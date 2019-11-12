@@ -6,14 +6,17 @@ import (
 	"testing"
 )
 
+var data []KeyRS
+
+
 type KeyRS struct {
 	DER string
 	R   string
 	S   string
 }
 
-func TestPointsFromDER(t *testing.T) {
-	data := []KeyRS{
+func init() {
+	data = []KeyRS{
 		KeyRS{
 			DER: "3045022078611477d7824bc8e48a4aa242e8b7733ef0315e2127682533e175a371df6447022100f91beab703e13cf3622d5140af8ec341cc994bb23a98021acb260d0959f47ed2",
 			R:   "78611477d7824bc8e48a4aa242e8b7733ef0315e2127682533e175a371df6447",
@@ -25,20 +28,39 @@ func TestPointsFromDER(t *testing.T) {
 			S:   "00e5fe2c1bb2156708f2ec3389a16e1308219e67e7ba2dd04653634c69f2b36e98",
 		},
 	}
+}
 
+// func TestToDER(t *testing.T) {
+// 	var r, s big.Int
+//
+// 	R, _ := r.SetString(data[0].R, 16)
+// 	S, _ := s.SetString(data[0].S, 16)
+//
+// 	signature := &ecdsaSigner{}
+// 	signature.Sig.R = R
+// 	signature.Sig.S = S
+//
+// 	res, err := signature.WriteToDER()
+// 	if err != nil {
+// 		t.Fail()
+// 	}
+//
+// 	fmt.Printf("ASN1: %s\n", res)
+// }
+
+func TestPointsFromDER(t *testing.T) {
 	for i := range data {
 		var r, s big.Int
 
 		R, _ := r.SetString(data[i].R, 16)
 		S, _ := s.SetString(data[i].S, 16)
 
-		sig := &ecdsaSignature{
-			R: R,
-			S: S,
+		sig := &ecdsaSigner{
+			Sig: &ecdsaSignature{R: R, S: S},
 		}
 
 		der, _ := hex.DecodeString(data[i].DER)
-		gotR, gotS := sig.PointsFromDER(der)
+		gotR, gotS := sig.Sig.PointsFromDER(der)
 
 		if gotR.Cmp(R) != 0 || gotS.Cmp(S) != 0 {
 			t.Fatalf("Unexpected R/S from DER string.\nExpected %v, %v\nGot %v, %v", R, S, gotR, gotS)

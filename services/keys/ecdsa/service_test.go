@@ -306,7 +306,7 @@ func TestSignandVerifyHuman(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.Sig.R, sig.Sig.S)
 
 	valid := Key.Verify(hash[:], sig)
 	fmt.Println("signature verified:", valid)
@@ -320,7 +320,7 @@ func TestSignAndVerify(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.Sig.R, sig.Sig.S)
 
 	valid := Key.Verify(hashed[:], sig)
 	fmt.Println("signature verified:", valid)

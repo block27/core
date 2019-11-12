@@ -26,8 +26,8 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func (e *ecdsaSignature) WriteToDER(file string) ([]byte, error) {
-	data, err := asn1.Marshal(*e)
+func (e *ecdsaSigner) WriteToDER(file string) ([]byte, error) {
+	data, err := asn1.Marshal(*e.Sig)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (e *ecdsaSignature) WriteToDER(file string) ([]byte, error) {
 // Convert an ECDSA signature (points R and S) to a byte array using ASN.1 DER encoding.
 // This is a port of Bitcore's Key.rs2DER method.
 //
-func (e *ecdsaSignature) PointsToDER() []byte {
+func (e *ecdsaSigner) PointsToDER() []byte {
 	// Ensure MSB doesn't break big endian encoding in DER sigs
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
@@ -57,8 +57,8 @@ func (e *ecdsaSignature) PointsToDER() []byte {
 		return b
 	}
 
-	rb := prefixPoint(e.R.Bytes())
-	sb := prefixPoint(e.S.Bytes())
+	rb := prefixPoint(e.Sig.R.Bytes())
+	sb := prefixPoint(e.Sig.S.Bytes())
 
 	// DER encoding:
 	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb

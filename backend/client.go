@@ -226,7 +226,7 @@ func (b *Backend) Welcome() {
 }
 
 func newSpinner() *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[21], 75*time.Millisecond) //21, 15, 14
+	s := spinner.New(spinner.CharSets[11], 75*time.Millisecond)
 
 	min, max := 0, len(h.Colors)-1
 	ndxCol := rand.Intn(max-min+1) + min

@@ -60,15 +60,6 @@ ecdsa_generate_rand:
 	openssl ecparam -name secp384r1 -rand xkcd221random.bin 2>/dev/null
 	openssl ecparam -name secp521r1 -genkey -noout -rand ~/1049376.bin -out ec-secp521r1.pem
 
-ecdsa_sign:
-	openssl dgst -sha1 -sign private.pem < file.data > signature.bin
-
-ecdsa_verify:
-	openssl dgst -ecdsa-with-SHA1 -verify public.pem -signature signature.bin file.data
-
-install:
-	go install -v
-
 lint:
 	golint ./...
 
@@ -78,6 +69,15 @@ openssl_cpu_speed:
 openssl_hardware_accelerated:
 	openssl speed -elapsed -evp aes-128-cbc
 
+openssl_check:
+	openssl asn1parse -inform der -in signature.der
+
+openssl_sign:
+	openssl dgst -sha1 -sign private.pem < file.data > signature.bin
+
+openssl_verify:
+	openssl dgst -ecdsa-with-SHA1 -verify public.pem -signature signature.bin file.data
+
 prepare_tests:
 	@rm -rf /tmp/var/keys/* || true
 
@@ -85,6 +85,7 @@ setup_machine:
 	mkdir -p /tmp/data
 	mkdir -p /var/data
 
+# TESTING ----------------------------------------------------------------------
 test: test_richgo
 
 test_coverage_func:
