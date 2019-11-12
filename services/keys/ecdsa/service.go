@@ -7,14 +7,15 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"crypto/x509"
+	// "encoding/asn1"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	// "math/rand"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -26,9 +27,9 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	guuid "github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,12 +37,12 @@ const (
 	statusArchived = "archive"
 )
 
-// KeyAPI ...
-//
+// KeyAPI - main api for defining Key behavior and functions
 type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
 
+	getArtSignature() string
 	getPrivateKey() (*ecdsa.PrivateKey, error)
 	getPublicKey() (*ecdsa.PublicKey, error)
 
@@ -54,7 +55,6 @@ type KeyAPI interface {
 
 // key - struct, main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
-//
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
@@ -144,7 +144,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
 		FingerprintMD5: fingerprintMD5(pub),
 		FingerprintSHA: fingerprintSHA256(pub),
-		CreatedAt: 			time.Now(),
+		CreatedAt:      time.Now(),
 	}
 
 	// Create file paths which include the public keys curve as signature
@@ -307,21 +307,21 @@ func (k *key) Struct() *key {
 // depends on the entropy of rand.
 //
 func (k *key) Sign(data []byte) (*ecdsaSignature, error) {
-	pKey, err := k.getPrivateKey()
+	pri, err := k.getPrivateKey()
 	if err != nil {
 		return (*ecdsaSignature)(nil), err
 	}
 
-	r, s, err := ecdsa.Sign(crypto.Reader, pKey, data)
+	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
 	if err != nil {
 		return (*ecdsaSignature)(nil), err
 	}
 
 	return &ecdsaSignature{
-		R:   r,
-		S:   s,
-		MD5: md5.Sum(data),
-		SHA: sha256.Sum256(data),
+		R: r,
+		S: s,
+		// MD5: md5.Sum(data),
+		// SHA: sha256.Sum256(data),
 	}, nil
 }
 
@@ -335,6 +335,33 @@ func (k *key) Verify(hash []byte, sig *ecdsaSignature) bool {
 	}
 
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
+}
+
+// generateUUID - generate and return a valid GUUID
+func generateUUID() guuid.UUID {
+	return guuid.New()
+}
+
+// getArtSignature ...
+func (k *key) getArtSignature() string {
+	cmd := exec.Command(
+		"/Users/amanelis/.pyenv/shims/python",
+		"tmp/drunken_bishop.py",
+		"--mode",
+		"sha256",
+		k.FingerprintSHA,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return ""
+	}
+
+	outStr, _ := string(stdout.Bytes()), string(stderr.Bytes())
+	return outStr
 }
 
 // getPrivateKey ...
@@ -364,11 +391,6 @@ func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	publicKey := genericPublicKey.(*ecdsa.PublicKey)
 
 	return publicKey, nil
-}
-
-// generateUUID - generate and return a valid GUUID
-func generateUUID() guuid.UUID {
-	return guuid.New()
 }
 
 /// importPublicKeyfromPEM ...
@@ -525,32 +547,15 @@ func keyFromGOB64(str string) (*key, error) {
 	return k, nil
 }
 
-// PrintKeys  ...
-func PrintKeys(keys []KeyAPI) {
-
+// PrintKeysTW - an elaborate way to display key information... not needed, but
+// nice for demos...
+func PrintKeysTW(keys []KeyAPI) {
 	stylePairs := [][]table.Style{
 		{table.StyleColoredBright},
-		// {table.StyleColoredBlackOnBlueWhite},
-		// {table.StyleColoredBlackOnCyanWhite},
-		// {table.StyleColoredGreenWhiteOnBlack},
-		// {table.StyleColoredBlackOnMagentaWhite},
-		// {table.StyleColoredBlackOnRedWhite},
-		// {table.StyleColoredBlackOnYellowWhite},
 	}
-
-	// styles := []table.Style{
-	// 	table.StyleColoredBright,
-	// 	table.StyleColoredBlackOnBlueWhite,
-	// 	table.StyleColoredBlackOnCyanWhite,
-	// 	table.StyleColoredGreenWhiteOnBlack,
-	// 	table.StyleColoredBlackOnMagentaWhite,
-	// 	table.StyleColoredBlackOnRedWhite,
-	// 	table.StyleColoredBlackOnYellowWhite,
-	// }
 
 	for ndx, f := range keys {
 		tw := table.NewWriter()
-		tw.SetIndexColumn(0)
 
 		tw.SetTitle(f.Struct().FilePointer())
 		tw.AppendRows([]table.Row{
@@ -571,11 +576,11 @@ func PrintKeys(keys []KeyAPI) {
 				f.Struct().KeySize,
 			},
 			{
-				"Pri",
+				"PrivateKey",
 				f.Struct().PrivateKeyB64[0:47],
 			},
 			{
-				"Pub",
+				"PublicKey",
 				f.Struct().PublicKeyB64[0:47],
 			},
 			{
@@ -583,7 +588,7 @@ func PrintKeys(keys []KeyAPI) {
 				f.Struct().FingerprintMD5,
 			},
 			{
-				"SHA",
+				"SHA256",
 				f.Struct().FingerprintSHA,
 			},
 			{
@@ -591,37 +596,27 @@ func PrintKeys(keys []KeyAPI) {
 				f.Struct().CreatedAt,
 			},
 			{
-				"SHA RandomArt",
-				RandomArt,
+				"SHA256 Visual",
+				f.getArtSignature(),
 			},
-
-			// {
-			// 	ndx,
-			// 	f.Struct().Name,
-			// 	// f.Struct().FingerprintMD5,
-			// 	// f.Struct().FingerprintSHA,
-			// 	f.Struct().KeySize,
-			// 	f.Struct().KeyType,
-			// },
 		})
 
 		twOuter := table.NewWriter()
-		// tw.SetStyle(styles[rand.Intn(len(styles))])
-		tw.SetStyle(table.StyleColoredBlackOnGreenWhite)
+		tw.SetStyle(table.StyleColoredDark)
 		tw.Style().Title.Align = text.AlignCenter
 
 		for _, stylePair := range stylePairs {
 			row := make(table.Row, 1)
-			for idx, _ := range stylePair {
+			for idx := range stylePair {
 				row[idx] = tw.Render()
 			}
 			twOuter.AppendRow(row)
 		}
 
-		tw.AppendFooter(table.Row{"", "", "", ndx})
 		twOuter.SetStyle(table.StyleDouble)
-		twOuter.SetTitle(fmt.Sprintf("Asymetric Key (%d)", ndx))
+		twOuter.SetTitle(fmt.Sprintf("Asymmetric Key (%d)", ndx))
 		twOuter.Style().Options.SeparateRows = true
+
 		fmt.Println(twOuter.Render())
 	}
 }
@@ -643,18 +638,3 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("	%s privateKeyPath: %s", helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
 	l.Infof("	%s publicKeyPath:  %s", helpers.RedFgB(">"), k.Struct().PublicKeyPath)
 }
-
-
-var RandomArt =`
-+---[  SHA   ]----+
-|   . ..          |
-|. . .=           |
-|.+. + o          |
-|o+.o..oo   .     |
-|o.Bo.oooS . .    |
-|E=+o+o.  o .     |
-|=++o.o  . .      |
-|=Bo .ooo         |
-|O+. .oo          |
-+-----------------+
-`

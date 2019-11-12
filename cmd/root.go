@@ -36,12 +36,14 @@ func init() {
 	// root
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(keysCmd)
+	rootCmd.AddCommand(infoCmd)
 
 	// keys
 	keysCmd.AddCommand(keysCreateCmd)
 	keysCmd.AddCommand(keysGetCmd)
 	keysCmd.AddCommand(keysListCmd)
 	keysCmd.AddCommand(keysSignCmd)
+	keysCmd.AddCommand(keysVerifyCmd)
 }
 
 func initConfig() {

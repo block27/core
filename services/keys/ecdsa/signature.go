@@ -4,6 +4,8 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"math/big"
+
+	"github.com/amanelis/bespin/helpers"
 )
 
 // ecdsaSignature - just used to hold a signature and pass around a bit nicer
@@ -13,8 +15,21 @@ type ecdsaSignature struct {
 	R, S *big.Int
 
 	// MD5/SHA for continuity purposes down the road.
-	SHA [32]byte
-	MD5 [16]byte
+	// SHA [32]byte
+	// MD5 [16]byte
+}
+
+func (e *ecdsaSignature) WriteToDER(file string) ([]byte, error) {
+	data, err := asn1.Marshal(*e)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := helpers.WriteBinary(file, data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // PointsToDER ...
@@ -75,4 +90,25 @@ func (e *ecdsaSignature) PointsFromDER(der []byte) (R, S *big.Int) {
 	S.SetBytes(s)
 
 	return
+}
+
+// canonicalizeInt returns the bytes for the passed big integer adjusted as
+// necessary to ensure that a big-endian encoded integer can't possibly be
+// misinterpreted as a negative number.  This can happen when the most
+// significant bit is set, so it is padded by a leading zero byte in this case.
+// Also, the returned bytes will have at least a single byte when the passed
+// value is 0.  This is required for DER encoding.
+func canonicalizeInt(val *big.Int) []byte {
+	b := val.Bytes()
+	if len(b) == 0 {
+		b = []byte{0x00}
+	}
+
+	if b[0]&0x80 != 0 {
+		paddedBytes := make([]byte, len(b)+1)
+		copy(paddedBytes[1:], b)
+		b = paddedBytes
+	}
+
+	return b
 }

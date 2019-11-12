@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"encoding/hex"
 	"fmt"
 
-	h "github.com/amanelis/bespin/helpers"
-	k "github.com/amanelis/bespin/services/keys/ecdsa"
+	"github.com/amanelis/bespin/helpers"
+	ecdsa "github.com/amanelis/bespin/services/keys/ecdsa"
 
 	"github.com/spf13/cobra"
 )
@@ -25,6 +24,11 @@ var (
 	// Sign flags
 	signIdentifier string
 	signFilePath   string
+
+	// Verify flags
+	verifyIdentifier    string
+	verifyFilePath      string
+	verifySignaturePath string
 )
 
 func init() {
@@ -47,13 +51,21 @@ func init() {
 	keysSignCmd.Flags().StringVarP(&signFilePath, "file", "f", "", "file required")
 	keysSignCmd.MarkFlagRequired("identifier")
 	keysSignCmd.MarkFlagRequired("file")
+
+	// Verify flags ...
+	keysVerifyCmd.Flags().StringVarP(&verifyIdentifier, "identifier", "i", "", "identifier required")
+	keysVerifyCmd.Flags().StringVarP(&verifyFilePath, "file", "f", "", "file required")
+	keysVerifyCmd.Flags().StringVarP(&verifySignaturePath, "signature", "s", "", "signature required")
+	keysVerifyCmd.MarkFlagRequired("identifier")
+	keysVerifyCmd.MarkFlagRequired("file")
+	keysVerifyCmd.MarkFlagRequired("signature")
 }
 
 var keysCmd = &cobra.Command{
 	Use: "keys",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf(fmt.Sprintf("%s", h.RedFgB("requires an argument")))
+			return fmt.Errorf(fmt.Sprintf("%s", helpers.RedFgB("requires an argument")))
 		}
 
 		return nil
@@ -63,44 +75,35 @@ var keysCmd = &cobra.Command{
 
 var keysCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create new key pairs",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		B.L.Printf("%s", h.CyanFgB("Keys[CREATE]"))
-	},
+	Short: "Create a new key pair",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, e := k.NewECDSA(*B.C, createName, createSize)
+		key, e := ecdsa.NewECDSA(*B.C, createName, createSize)
 		if e != nil {
 			panic(e)
 		}
 
-		k.PrintKey(key.Struct(), B.L)
+		ecdsa.PrintKey(key.Struct(), B.L)
 	},
 }
 
 var keysGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get key by identifier",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		B.L.Printf("%s", h.CyanFgB("Keys[GET]"))
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		key, e := k.GetECDSA(*B.C, getIdentifier)
+		key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
 		if e != nil {
 			panic(e)
 		}
 
-		k.PrintKey(key.Struct(), B.L)
+		ecdsa.PrintKey(key.Struct(), B.L)
 	},
 }
 
 var keysListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all keys",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		B.L.Printf("%s", h.CyanFgB("Keys[LIST]"))
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		keys, err := k.ListECDSA(*B.C)
+		keys, err := ecdsa.ListECDSA(*B.C)
 		if err != nil {
 			panic(err)
 		}
@@ -108,11 +111,7 @@ var keysListCmd = &cobra.Command{
 		if len(keys) == 0 {
 			B.L.Printf("No keys available")
 		} else {
-			k.PrintKeys(keys)
-			// for _, f := range keys {
-			// 	k.PrintKey(f.Struct(), B.L)
-			// 	fmt.Println()
-			// }
+			ecdsa.PrintKeysTW(keys)
 		}
 	},
 }
@@ -120,26 +119,39 @@ var keysListCmd = &cobra.Command{
 var keysSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with a public Key",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		B.L.Printf("%s", h.CyanFgB("Keys[SIGN]"))
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		key, e := k.GetECDSA(*B.C, signIdentifier)
+		key, e := ecdsa.GetECDSA(*B.C, signIdentifier)
 		if e != nil {
 			panic(e)
 		}
 
-		dataR := h.ReadBinary(signFilePath)
+		dataR := helpers.ReadBinary(signFilePath)
 
 		sig, err := key.Sign(dataR)
 		if err != nil {
 			panic(err)
 		}
 
-		B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
-		B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
+		pth := fmt.Sprintf("/var/data/keys/%s/signature.der", key.FilePointer())
+		if _, err := sig.WriteToDER(pth); err != nil {
+			panic(err)
+		}
+
+		// B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
+		// B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
 		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
 			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 		B.L.Printf("Verified: \n\t\t%t", key.Verify(dataR, sig))
+	},
+}
+
+var keysVerifyCmd = &cobra.Command{
+	Use:   "verify",
+	Short: "Verify signed data",
+	Run: func(cmd *cobra.Command, args []string) {
+		_, e := ecdsa.GetECDSA(*B.C, verifyIdentifier)
+		if e != nil {
+			panic(e)
+		}
 	},
 }

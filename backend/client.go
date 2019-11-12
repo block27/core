@@ -19,7 +19,7 @@ import (
 var (
 	// AESDevice - crypto key/iv provider.
 	//
-	AESDevice = "/dev/tty.usbmodem20021401"
+	AESDevice = "/dev/tty.usbmodem2002140"
 )
 
 // Backend - main struct for the entire application configuration

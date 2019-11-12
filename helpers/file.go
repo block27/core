@@ -82,3 +82,24 @@ func ReadBinary(filename string) []byte {
 
 	return bytes
 }
+
+// WriteBinary - write byte data to file
+func WriteBinary(filename string, data []byte) (int, error) {
+	file, err := os.OpenFile(
+		filename,
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
+		0666,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	defer file.Close()
+
+	bytesWritten, err := file.Write(data)
+	if err != nil {
+		return 0, err
+	}
+
+	return bytesWritten, nil
+}
