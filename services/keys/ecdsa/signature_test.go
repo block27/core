@@ -1,4 +1,4 @@
-package keys
+package ecdsa
 
 import (
 	"encoding/hex"
@@ -56,11 +56,11 @@ func TestPointsFromDER(t *testing.T) {
 		S, _ := s.SetString(data[i].S, 16)
 
 		sig := &ecdsaSigner{
-			Sig: &ecdsaSignature{R: R, S: S},
+			R: R, S: S,
 		}
 
 		der, _ := hex.DecodeString(data[i].DER)
-		gotR, gotS := sig.Sig.PointsFromDER(der)
+		gotR, gotS := sig.PointsFromDER(der)
 
 		if gotR.Cmp(R) != 0 || gotS.Cmp(S) != 0 {
 			t.Fatalf("Unexpected R/S from DER string.\nExpected %v, %v\nGot %v, %v", R, S, gotR, gotS)

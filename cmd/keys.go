@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"encoding/hex"
+	// "encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/amanelis/bespin/helpers"
-	ecdsa "github.com/amanelis/bespin/services/keys/ecdsa"
+	"github.com/amanelis/bespin/services/keys/ecdsa"
 )
 
 var (
@@ -129,25 +129,36 @@ var keysSignCmd = &cobra.Command{
 
 		// Read the file ready be signed / this should probably be hashed
 		// if size > key bit size anyways.
-		data := helpers.ReadBinary(signFilePath)
+		data, derr := helpers.ReadBinary(signFilePath)
+		if derr != nil {
+			panic(derr)
+		}
 
-		// Sign the data, privae key used internally
+		// Sign the data with the private key used internally
 		sig, err := key.Sign(data)
 		if err != nil {
 			panic(err)
 		}
 
-		// Take the signature output to asn1/der, this used for verification later
-		if _, err := sig.WriteToDER(fmt.Sprintf("/var/data/keys/%s/signature-%d.der",
-				key.FilePointer(), int32(time.Now().Unix()))); err != nil {
+		// Tell the sig receiver to asn1/der, this used for verification later
+		derD, err := sig.SigToDER()
+		if err != nil {
 			panic(err)
 		}
 
-		B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
-		B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
-		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-			len(sig.Sig.R.Text(10)), sig.Sig.R, len(sig.Sig.S.Text(10)), sig.Sig.S)
+		// Now write a signarture.der file to hold the signature
+		derF := fmt.Sprintf("/var/data/keys/%s/signature-%d.der", key.FilePointer(),
+			int32(time.Now().Unix()))
+		if _, err := helpers.WriteBinary(derF, derD); err != nil {
+			panic(err)
+		}
+
+		// B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
+		// B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
+		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x\n\t\tder=%s",
+			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S, derF)
 		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sig))
+
 	},
 }
 
@@ -155,24 +166,26 @@ var keysVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
 	Run: func(cmd *cobra.Command, args []string) {
-		// key, err := ecdsa.GetECDSA(*B.C, verifyIdentifier)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		//
-		// // Read the file ready be signed / this should probably be hashed
-		// // if size > key bit size anyways.
-		// data := helpers.ReadBinary(verifyFilePath)
-		//
-		// // Read the signature file and convert to an ecdsaSigner
-		// derF := helpers.ReadBinary(verifySignaturePath)
-		// derr := ecdsa.ToSig(signer, derF)
-		// if derr != nil {
-		// 	panic(derr)
-		// }
-		//
-		// B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-		// 	len(signer.Sig.R.Text(10)), signer.Sig.R, len(signer.Sig.S.Text(10)), signer.Sig.S)
-		// B.L.Printf("Verified: \n\t\t%t", key.Verify(data, signer))
+		key, err := ecdsa.GetECDSA(*B.C, verifyIdentifier)
+		if err != nil {
+			panic(err)
+		}
+
+		// Read the file ready be signed / this should probably be hashed
+		// if size > key bit size anyways.
+		data, derr := helpers.ReadBinary(verifyFilePath)
+		if derr != nil {
+			panic(derr)
+		}
+
+		// Read the signature file and convert to an ecdsaSigner
+		sign, derr := ecdsa.LoadSignature(verifySignaturePath)
+		if derr != nil {
+			panic(derr)
+		}
+
+		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x\n\t\tder=%s",
+			len(sign.R.Text(10)), sign.R, len(sign.S.Text(10)), sign.S, verifySignaturePath)
+		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sign))
 	},
 }

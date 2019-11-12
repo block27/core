@@ -1,38 +1,60 @@
-package keys
+package ecdsa
 
 import (
 	"encoding/asn1"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/amanelis/bespin/helpers"
 )
 
 type ecdsaSigner struct {
-	SHA [32]byte
-	MD5 [16]byte
+	// SHA [32]byte
+	// MD5 [16]byte
+	//
+	// File string
+	// Sig *ecdsaSignature
 
-	// File path of the hashed object or file using for signature
-	File string
-
-	// Sig, when converting to asn1, only the R,S attributes can be in the struct
-	Sig *ecdsaSignature
-}
-
-// ecdsaSignature - just used to hold a signature and pass around a bit nicer
-//
-type ecdsaSignature struct {
-	// Standard resulting signature values
 	R, S *big.Int
 }
 
-func (e *ecdsaSigner) WriteToDER(file string) ([]byte, error) {
-	data, err := asn1.Marshal(*e.Sig)
+// LoadSignature ...
+func LoadSignature(file string) (*ecdsaSigner, error) {
+	s := &ecdsaSigner{}
+	d := struct{R, S *big.Int}{}
+
+	// Read in the binary signature file containing R,S
+	binF, err := helpers.ReadBinary(file)
 	if err != nil {
-		return nil, err
+		return (*ecdsaSigner)(nil), err
 	}
 
-	if _, err := helpers.WriteBinary(file, data); err != nil {
+	fmt.Printf("base: ")
+	fmt.Println(reflect.TypeOf(s))
+	fmt.Printf("&: ")
+	fmt.Println(reflect.TypeOf(&s))
+	fmt.Printf("*: ")
+	fmt.Println(reflect.TypeOf(*s))
+	fmt.Printf("&d: ")
+	fmt.Println(reflect.TypeOf(&d))
+
+
+	if _, err := asn1.Unmarshal(binF, &d); err != nil {
+		return (*ecdsaSigner)(nil), err
+	}
+
+	s.R = d.R
+	s.S = d.S
+
+	return s, nil
+}
+
+// SigToDER ...
+func (e *ecdsaSigner) SigToDER() ([]byte, error) {
+	data, err := asn1.Marshal(*e)
+	if err != nil {
 		return nil, err
 	}
 
@@ -42,7 +64,6 @@ func (e *ecdsaSigner) WriteToDER(file string) ([]byte, error) {
 // PointsToDER ...
 // Convert an ECDSA signature (points R and S) to a byte array using ASN.1 DER encoding.
 // This is a port of Bitcore's Key.rs2DER method.
-//
 func (e *ecdsaSigner) PointsToDER() []byte {
 	// Ensure MSB doesn't break big endian encoding in DER sigs
 	prefixPoint := func(b []byte) []byte {
@@ -57,8 +78,8 @@ func (e *ecdsaSigner) PointsToDER() []byte {
 		return b
 	}
 
-	rb := prefixPoint(e.Sig.R.Bytes())
-	sb := prefixPoint(e.Sig.S.Bytes())
+	rb := prefixPoint(e.R.Bytes())
+	sb := prefixPoint(e.S.Bytes())
 
 	// DER encoding:
 	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
@@ -79,7 +100,7 @@ func (e *ecdsaSigner) PointsToDER() []byte {
 // Sometimes demarshalling using Golang's DEC to struct unmarshalling fails; this extracts R and S from the bytes
 // manually to prevent crashing.
 // This should NOT be a hex encoded byte array
-func (e *ecdsaSignature) PointsFromDER(der []byte) (R, S *big.Int) {
+func (e *ecdsaSigner) PointsFromDER(der []byte) (R, S *big.Int) {
 	R, S = &big.Int{}, &big.Int{}
 
 	data := asn1.RawValue{}

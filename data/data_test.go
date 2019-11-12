@@ -12,7 +12,7 @@ import (
 
 func TestSHADummy(t *testing.T) {
 	file := "./dummy.pdf"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	summ := fmt.Sprintf("%x", sha256.Sum256(data))
 
 	if summ != "3df79d34abbca99308e79cb94461c1893582604d68329a41fd4bec1885e6adb4" {
@@ -24,7 +24,7 @@ func TestSHADummy(t *testing.T) {
 
 func TestMD5Dummy(t *testing.T) {
 	file := "./dummy.pdf"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	sigs := md5.Sum(data)
 	summ := fmt.Sprintf("%x", hex.EncodeToString(sigs[:]))
 
@@ -37,7 +37,7 @@ func TestMD5Dummy(t *testing.T) {
 
 func TestSHARandom(t *testing.T) {
 	file := "./random"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	summ := fmt.Sprintf("%x", sha256.Sum256(data))
 
 	if summ != "ed43ab83803407994484de86803284b39fcf0fc31185c5114bf3741c3514c613" {
@@ -49,7 +49,7 @@ func TestSHARandom(t *testing.T) {
 
 func TestMD5Random(t *testing.T) {
 	file := "./random"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	sigs := md5.Sum(data)
 	summ := fmt.Sprintf("%x", hex.EncodeToString(sigs[:]))
 
@@ -62,7 +62,7 @@ func TestMD5Random(t *testing.T) {
 
 func TestSHABig(t *testing.T) {
 	file := "./big"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	summ := fmt.Sprintf("%x", sha256.Sum256(data))
 
 	if summ != "81110928e7103ca0a8b1648930f15056f015a59cdf9c035cb3e7795ff84a6ac0" {
@@ -74,7 +74,7 @@ func TestSHABig(t *testing.T) {
 
 func TestMD5Big(t *testing.T) {
 	file := "./big"
-	data := helpers.ReadBinary(file)
+	data, _ := helpers.ReadBinary(file)
 	sigs := md5.Sum(data)
 	summ := fmt.Sprintf("%x", hex.EncodeToString(sigs[:]))
 

@@ -1,11 +1,11 @@
-package keys
+package ecdsa
 
 import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/md5"
-	"crypto/sha256"
+	// "crypto/md5"
+	// "crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
@@ -313,11 +313,10 @@ func (k *key) Sign(data []byte) (*ecdsaSigner, error) {
 		return (*ecdsaSigner)(nil), err
 	}
 
-	return &ecdsaSigner{
-		MD5: md5.Sum(data),
-		SHA: sha256.Sum256(data),
-		Sig: &ecdsaSignature{R: r, S: s},
-	}, nil
+	return &ecdsaSigner{R: r, S: s}, nil
+		// MD5: md5.Sum(data),
+		// SHA: sha256.Sum256(data),
+		// Sig: &ecdsaSignature{R: r, S: s},
 }
 
 // Verify - verifies the signature in r, s of hash using the public key, pub. Its
@@ -329,7 +328,7 @@ func (k *key) Verify(hash []byte, sig *ecdsaSigner) bool {
 		panic(err)
 	}
 
-	return ecdsa.Verify(pub, hash, sig.Sig.R, sig.Sig.S)
+	return ecdsa.Verify(pub, hash, sig.R, sig.S)
 }
 
 // generateUUID - generate and return a valid GUUID

@@ -58,17 +58,17 @@ func ReadFile(filename string) (string, error) {
 	return string(b), nil
 }
 
-func ReadBinary(filename string) []byte {
+func ReadBinary(filename string) ([]byte, error) {
 	file, err := os.Open(filename)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer file.Close()
 
 	stats, statsErr := file.Stat()
 	if statsErr != nil {
-		panic(statsErr)
+		return nil, statsErr
 	}
 
 	var size int64 = stats.Size()
@@ -77,10 +77,10 @@ func ReadBinary(filename string) []byte {
 	bufr := bufio.NewReader(file)
 	_, err = bufr.Read(bytes)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return bytes
+	return bytes, nil
 }
 
 // WriteBinary - write byte data to file
