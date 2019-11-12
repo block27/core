@@ -13,9 +13,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	// "math/rand"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
@@ -25,6 +27,8 @@ import (
 
 	guuid "github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/text"
 )
 
 const (
@@ -77,6 +81,8 @@ type key struct {
 
 	PrivateKeyB64 string // B64 of private key
 	PublicKeyB64  string // B64 of public key
+
+	CreatedAt time.Time
 
 	// Used as place holder converstions during Sign/Verify
 	// these should probably be set to nil after use as it's
@@ -138,6 +144,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
 		FingerprintMD5: fingerprintMD5(pub),
 		FingerprintSHA: fingerprintSHA256(pub),
+		CreatedAt: 			time.Now(),
 	}
 
 	// Create file paths which include the public keys curve as signature
@@ -518,6 +525,107 @@ func keyFromGOB64(str string) (*key, error) {
 	return k, nil
 }
 
+// PrintKeys  ...
+func PrintKeys(keys []KeyAPI) {
+
+	stylePairs := [][]table.Style{
+		{table.StyleColoredBright},
+		// {table.StyleColoredBlackOnBlueWhite},
+		// {table.StyleColoredBlackOnCyanWhite},
+		// {table.StyleColoredGreenWhiteOnBlack},
+		// {table.StyleColoredBlackOnMagentaWhite},
+		// {table.StyleColoredBlackOnRedWhite},
+		// {table.StyleColoredBlackOnYellowWhite},
+	}
+
+	// styles := []table.Style{
+	// 	table.StyleColoredBright,
+	// 	table.StyleColoredBlackOnBlueWhite,
+	// 	table.StyleColoredBlackOnCyanWhite,
+	// 	table.StyleColoredGreenWhiteOnBlack,
+	// 	table.StyleColoredBlackOnMagentaWhite,
+	// 	table.StyleColoredBlackOnRedWhite,
+	// 	table.StyleColoredBlackOnYellowWhite,
+	// }
+
+	for ndx, f := range keys {
+		tw := table.NewWriter()
+		tw.SetIndexColumn(0)
+
+		tw.SetTitle(f.Struct().FilePointer())
+		tw.AppendRows([]table.Row{
+			{
+				"Name",
+				f.Struct().Name,
+			},
+			{
+				"Slug",
+				f.Struct().Slug,
+			},
+			{
+				"Type",
+				f.Struct().KeyType,
+			},
+			{
+				"Size",
+				f.Struct().KeySize,
+			},
+			{
+				"Pri",
+				f.Struct().PrivateKeyB64[0:47],
+			},
+			{
+				"Pub",
+				f.Struct().PublicKeyB64[0:47],
+			},
+			{
+				"MD5",
+				f.Struct().FingerprintMD5,
+			},
+			{
+				"SHA",
+				f.Struct().FingerprintSHA,
+			},
+			{
+				"Created",
+				f.Struct().CreatedAt,
+			},
+			{
+				"SHA RandomArt",
+				RandomArt,
+			},
+
+			// {
+			// 	ndx,
+			// 	f.Struct().Name,
+			// 	// f.Struct().FingerprintMD5,
+			// 	// f.Struct().FingerprintSHA,
+			// 	f.Struct().KeySize,
+			// 	f.Struct().KeyType,
+			// },
+		})
+
+		twOuter := table.NewWriter()
+		// tw.SetStyle(styles[rand.Intn(len(styles))])
+		tw.SetStyle(table.StyleColoredBlackOnGreenWhite)
+		tw.Style().Title.Align = text.AlignCenter
+
+		for _, stylePair := range stylePairs {
+			row := make(table.Row, 1)
+			for idx, _ := range stylePair {
+				row[idx] = tw.Render()
+			}
+			twOuter.AppendRow(row)
+		}
+
+		tw.AppendFooter(table.Row{"", "", "", ndx})
+		twOuter.SetStyle(table.StyleDouble)
+		twOuter.SetTitle(fmt.Sprintf("Asymetric Key (%d)", ndx))
+		twOuter.Style().Options.SeparateRows = true
+		fmt.Println(twOuter.Render())
+	}
+}
+
 // PrintKey - helper function to print a key
 func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
@@ -528,9 +636,25 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
 	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
 	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
+	l.Infof("Key Created: %s", helpers.YellowFgB(k.Struct().CreatedAt))
 	l.Infof("	%s privateKey: %s......", helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
 	l.Infof("	%s publicKey:  %s......", helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
 	l.Infof("	%s privatePemPath: %s", helpers.RedFgB(">"), k.Struct().PrivatePemPath)
 	l.Infof("	%s privateKeyPath: %s", helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
 	l.Infof("	%s publicKeyPath:  %s", helpers.RedFgB(">"), k.Struct().PublicKeyPath)
 }
+
+
+var RandomArt =`
++---[  SHA   ]----+
+|   . ..          |
+|. . .=           |
+|.+. + o          |
+|o+.o..oo   .     |
+|o.Bo.oooS . .    |
+|E=+o+o.  o .     |
+|=++o.o  . .      |
+|=Bo .ooo         |
+|O+. .oo          |
++-----------------+
+`
