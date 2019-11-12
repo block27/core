@@ -8,15 +8,22 @@ import (
 	"github.com/amanelis/bespin/helpers"
 )
 
+type ecdsaSigner struct {
+	SHA [32]byte
+	MD5 [16]byte
+
+	// File path of the hashed object or file using for signature
+	File string
+
+	// Sig, when converting to asn1, only the R,S attributes can be in the struct
+	Sig *ecdsaSignature
+}
+
 // ecdsaSignature - just used to hold a signature and pass around a bit nicer
 //
 type ecdsaSignature struct {
 	// Standard resulting signature values
 	R, S *big.Int
-
-	// MD5/SHA for continuity purposes down the road.
-	// SHA [32]byte
-	// MD5 [16]byte
 }
 
 func (e *ecdsaSignature) WriteToDER(file string) ([]byte, error) {

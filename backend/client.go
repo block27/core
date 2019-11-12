@@ -19,7 +19,7 @@ import (
 var (
 	// AESDevice - crypto key/iv provider.
 	//
-	AESDevice = "/dev/tty.usbmodem2002140"
+	AESDevice = "/dev/tty.usbmodem20021401"
 )
 
 // Backend - main struct for the entire application configuration
@@ -178,8 +178,8 @@ func (b *Backend) ValidateKeys() error {
 	}
 
 	s.Stop()
-	fmt.Printf("ky(%d) verified, %s\n", len(string(aes.Key())), h.GreenFgB("OK"))
-	fmt.Printf("iv(%d) verified, %s\n", len(string(aes.Iv())), h.GreenFgB("OK"))
+	fmt.Printf("hw ky(%d) verified, %s\n", len(string(aes.Key())), h.GreenFgB("OK"))
+	fmt.Printf("hw iv(%d) verified, %s\n", len(string(aes.Iv())), h.GreenFgB("OK"))
 
 	// Create a cypter service object - encryption/decryption
 	c, _ := crypto.NewCrypter(

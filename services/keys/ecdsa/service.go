@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 	"sync"
 	"time"
@@ -344,8 +345,13 @@ func generateUUID() guuid.UUID {
 
 // getArtSignature ...
 func (k *key) getArtSignature() string {
+	usr, err := user.Current()
+	if err !=nil {
+		return "--- path err ---"
+	}
+
 	cmd := exec.Command(
-		"/Users/amanelis/.pyenv/shims/python",
+		fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir),
 		"tmp/drunken_bishop.py",
 		"--mode",
 		"sha256",
@@ -357,10 +363,14 @@ func (k *key) getArtSignature() string {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return ""
+		return "--- run err ---"
 	}
 
-	outStr, _ := string(stdout.Bytes()), string(stderr.Bytes())
+	outStr, outErr := string(stdout.Bytes()), string(stderr.Bytes())
+	if outErr != "" {
+		return fmt.Sprintf("--- %s ---", outErr)
+	}
+
 	return outStr
 }
 
