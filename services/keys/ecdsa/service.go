@@ -313,10 +313,12 @@ func (k *key) Sign(data []byte) (*ecdsaSigner, error) {
 		return (*ecdsaSigner)(nil), err
 	}
 
-	return &ecdsaSigner{R: r, S: s}, nil
+	return &ecdsaSigner{
 		// MD5: md5.Sum(data),
 		// SHA: sha256.Sum256(data),
-		// Sig: &ecdsaSignature{R: r, S: s},
+		R: r,
+		S: s,
+	}, nil
 }
 
 // Verify - verifies the signature in r, s of hash using the public key, pub. Its

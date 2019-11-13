@@ -121,8 +121,12 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
 func (b *Backend) ValidateKeys() error {
-	s := newSpinner()
-	s.Start()
+	spinners, err := newSpinner(3)
+	if err != nil {
+		return err
+	}
+	for i:=0; i<len(spinners);i++ { spinners[i].Start() }
+
 
 	fmt.Printf("Begining AES hardware authentication...\n")
 
@@ -135,7 +139,7 @@ func (b *Backend) ValidateKeys() error {
 		extB1 = fmt.Sprintf("%s/%s", "/media/pi/BASE1", config.ExtBase1Path)
 		extB2 = fmt.Sprintf("%s/%s", "/media/pi/BASE2", config.ExtBase2Path)
 	} else {
-		s.Stop()
+		for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 		return fmt.Errorf("unsupported OS")
 	}
 
@@ -152,7 +156,7 @@ func (b *Backend) ValidateKeys() error {
 	// Check all paths, ensure every one exists
 	for _, v := range paths {
 		if !h.FileExists(v) {
-			s.Stop()
+			for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 			return fmt.Errorf("%s%s%s", h.RedFgB("missing ["), h.RedFgB(v), h.RedFgB("] mount"))
 		}
 	}
@@ -160,7 +164,7 @@ func (b *Backend) ValidateKeys() error {
 	// Pull the Key/Iv off the hardware device
 	aes, err := b.RequestHardwareKeys()
 	if err != nil {
-		s.Stop()
+		for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 		return err
 	}
 
@@ -168,16 +172,16 @@ func (b *Backend) ValidateKeys() error {
 	hmI, _ := h.ReadFile(config.HostMasterIvPath)
 
 	if string(aes.Key()) != hmK {
-		s.Stop()
+		for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 		return fmt.Errorf("%s", h.RedFgB("key does not match Hardware(key)"))
 	}
 
 	if string(aes.Iv()) != hmI {
-		s.Stop()
+		for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 		return fmt.Errorf("%s", h.RedFgB("iv does not match Hardware(iv)"))
 	}
 
-	s.Stop()
+	for i:=0; i<len(spinners);i++ { spinners[i].Stop() }
 	fmt.Printf("hw ky(%d) verified, %s\n", len(string(aes.Key())), h.GreenFgB("OK"))
 	fmt.Printf("hw iv(%d) verified, %s\n", len(string(aes.Iv())), h.GreenFgB("OK"))
 
@@ -225,13 +229,29 @@ func (b *Backend) Welcome() {
 		h.CyanFgB("----------------------------------------------------------------"))
 }
 
-func newSpinner() *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[11], 75*time.Millisecond)
+func newSpinner(num int) ([]*spinner.Spinner, error) {
+	f := []int{0,1,2,3,4,5,6,7,8,9,11,13,14,17,18,19,20,21,22,23,24,28,29,30,40,41,42}
 
-	min, max := 0, len(h.Colors)-1
-	ndxCol := rand.Intn(max-min+1) + min
+	if num > len(f) {
+		return nil, fmt.Errorf("out of range from formats selected, please try smaller number")
+	}
 
-	s.Color(h.Colors[ndxCol], "bold")
+	var spinners []*spinner.Spinner
 
-	return s
+	minF, maxF := 0, len(f)-1
+	minC, maxC := 0, len(h.Colors)-1
+
+	for i := 0; i < num; i++ {
+
+		ndxFnt := rand.Intn(maxF-minF+1) + minF
+		ndxCol := rand.Intn(maxC-minC+1) + minC
+
+		s := spinner.New(spinner.CharSets[ndxFnt], 75*time.Millisecond)
+		s.Color(h.Colors[ndxCol], "bold")
+
+		spinners = append(spinners, s)
+
+	}
+
+	return spinners, nil
 }

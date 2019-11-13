@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// FileExists ...
 func FileExists(name string) bool {
 	if _, err := os.Stat(name); err != nil {
 		if os.IsNotExist(err) {
@@ -19,6 +20,7 @@ func FileExists(name string) bool {
 	return true
 }
 
+// MD5File ...
 func MD5File(filePath string) (string, error) {
 	//Initialize variable returnMD5String now in case an error has to be returned
 	var returnMD5String string
@@ -49,6 +51,7 @@ func MD5File(filePath string) (string, error) {
 	return returnMD5String, nil
 }
 
+// ReadFile ...
 func ReadFile(filename string) (string, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -58,6 +61,7 @@ func ReadFile(filename string) (string, error) {
 	return string(b), nil
 }
 
+// ReadBinary ...
 func ReadBinary(filename string) ([]byte, error) {
 	file, err := os.Open(filename)
 
@@ -71,7 +75,7 @@ func ReadBinary(filename string) ([]byte, error) {
 		return nil, statsErr
 	}
 
-	var size int64 = stats.Size()
+	size := stats.Size()
 	bytes := make([]byte, size)
 
 	bufr := bufio.NewReader(file)
@@ -84,9 +88,9 @@ func ReadBinary(filename string) ([]byte, error) {
 }
 
 // WriteBinary - write byte data to file
-func WriteBinary(filename string, data []byte) (int, error) {
-	file, err := os.OpenFile(
-		filename,
+func WriteBinary(file string, data []byte) (int, error) {
+	handle, err := os.OpenFile(
+		file,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
 		0666,
 	)
@@ -94,9 +98,9 @@ func WriteBinary(filename string, data []byte) (int, error) {
 		return 0, err
 	}
 
-	defer file.Close()
+	defer handle.Close()
 
-	bytesWritten, err := file.Write(data)
+	bytesWritten, err := handle.Write(data)
 	if err != nil {
 		return 0, err
 	}

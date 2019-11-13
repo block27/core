@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	// "crypto/md5"
+	// "crypto/sha256"
 	// "encoding/hex"
 	"fmt"
 	"time"
@@ -179,13 +181,17 @@ var keysVerifyCmd = &cobra.Command{
 		}
 
 		// Read the signature file and convert to an ecdsaSigner
-		sign, derr := ecdsa.LoadSignature(verifySignaturePath)
+		sig, derr := ecdsa.LoadSignature(verifySignaturePath)
 		if derr != nil {
 			panic(derr)
 		}
 
+		// sig.MD5 = md5.Sum(data)
+		// sig.SHA = sha256.Sum256(data)
+		// B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
+		// B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
 		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x\n\t\tder=%s",
-			len(sign.R.Text(10)), sign.R, len(sign.S.Text(10)), sign.S, verifySignaturePath)
-		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sign))
+			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S, verifySignaturePath)
+		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sig))
 	},
 }

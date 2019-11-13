@@ -3,52 +3,39 @@ package ecdsa
 import (
 	"encoding/asn1"
 	"encoding/hex"
-	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/amanelis/bespin/helpers"
 )
 
 type ecdsaSigner struct {
+	// Hash the data file for continuity purposes
 	// SHA [32]byte
 	// MD5 [16]byte
-	//
-	// File string
-	// Sig *ecdsaSignature
 
+	// DER signature data
 	R, S *big.Int
 }
 
 // LoadSignature ...
 func LoadSignature(file string) (*ecdsaSigner, error) {
-	s := &ecdsaSigner{}
-	d := struct{R, S *big.Int}{}
-
-	// Read in the binary signature file containing R,S
+	// Read in the binary signature file containing {DER,R,S}
 	binF, err := helpers.ReadBinary(file)
 	if err != nil {
 		return (*ecdsaSigner)(nil), err
 	}
 
-	fmt.Printf("base: ")
-	fmt.Println(reflect.TypeOf(s))
-	fmt.Printf("&: ")
-	fmt.Println(reflect.TypeOf(&s))
-	fmt.Printf("*: ")
-	fmt.Println(reflect.TypeOf(*s))
-	fmt.Printf("&d: ")
-	fmt.Println(reflect.TypeOf(&d))
-
-
+	// Create a temp struct to hold the decode, had lots of problems decoding to
+	// the needed ecdsaSigner struct ...
+	d := struct{R, S *big.Int}{}
 	if _, err := asn1.Unmarshal(binF, &d); err != nil {
 		return (*ecdsaSigner)(nil), err
 	}
 
-	s.R = d.R
-	s.S = d.S
-
-	return s, nil
+	return &ecdsaSigner{
+		R: d.R,
+		S: d.S,
+	}, nil
 }
 
 // SigToDER ...

@@ -30,24 +30,6 @@ func init() {
 	}
 }
 
-// func TestToDER(t *testing.T) {
-// 	var r, s big.Int
-//
-// 	R, _ := r.SetString(data[0].R, 16)
-// 	S, _ := s.SetString(data[0].S, 16)
-//
-// 	signature := &ecdsaSigner{}
-// 	signature.Sig.R = R
-// 	signature.Sig.S = S
-//
-// 	res, err := signature.WriteToDER()
-// 	if err != nil {
-// 		t.Fail()
-// 	}
-//
-// 	fmt.Printf("ASN1: %s\n", res)
-// }
-
 func TestPointsFromDER(t *testing.T) {
 	for i := range data {
 		var r, s big.Int
