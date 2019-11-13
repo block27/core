@@ -309,7 +309,7 @@ func TestSignandVerifyHuman(t *testing.T) {
 	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
 	valid := Key.Verify(hash[:], sig)
-	fmt.Println("signature verified:", valid)
+	fmt.Println("verified:", valid)
 }
 
 func TestSignAndVerify(t *testing.T) {
@@ -323,7 +323,7 @@ func TestSignAndVerify(t *testing.T) {
 	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
 	valid := Key.Verify(hashed[:], sig)
-	fmt.Println("signature verified:", valid)
+	fmt.Println("verified:", valid)
 
 	if !valid {
 		t.Fail()

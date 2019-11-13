@@ -21,6 +21,7 @@ import (
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/services/keys/ecdsa/encodings"
 
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
@@ -45,8 +46,8 @@ type KeyAPI interface {
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
 
-	Sign([]byte) (*ecdsaSigner, error)
-	Verify([]byte, *ecdsaSigner) bool
+	Sign([]byte) (*Signer, error)
+	Verify([]byte, *Signer) bool
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -126,7 +127,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
-	pemKey, pemPub := encode(pri, pub)
+	pemKey, pemPub := encodings.Encode(pri, pub)
 
 	// Create the key struct object
 	key := &key{
@@ -138,8 +139,8 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
-		FingerprintMD5: fingerprintMD5(pub),
-		FingerprintSHA: fingerprintSHA256(pub),
+		FingerprintMD5: encodings.FingerprintMD5(pub),
+		FingerprintSHA: encodings.FingerprintSHA256(pub),
 		CreatedAt:      time.Now(),
 	}
 
@@ -185,7 +186,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	}
 
 	pemkey := &pem.Block{
-		Type: ecPrivateKey,
+		Type:  encodings.ECPrivateKey,
 		Bytes: pem509,
 	}
 
@@ -299,21 +300,20 @@ func (k *key) Struct() *key {
 // Sign - signs a hash (which should be the result of hashing a larger message)
 // using the private key, priv. If the hash is longer than the bit-length of the
 // private key's curve order, the hash will be truncated to that length.  It
-// returns the signature as a pair of integers. The security of the private key
-// depends on the entropy of rand.
-//
-func (k *key) Sign(data []byte) (*ecdsaSigner, error) {
+// returns the signature as a pair of integers{R,S}. The security of the private
+// key depends on the entropy of rand / which in this case we implement our own
+func (k *key) Sign(data []byte) (*Signer, error) {
 	pri, err := k.getPrivateKey()
 	if err != nil {
-		return (*ecdsaSigner)(nil), err
+		return (*Signer)(nil), err
 	}
 
 	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
 	if err != nil {
-		return (*ecdsaSigner)(nil), err
+		return (*Signer)(nil), err
 	}
 
-	return &ecdsaSigner{
+	return &Signer{
 		// MD5: md5.Sum(data),
 		// SHA: sha256.Sum256(data),
 		R: r,
@@ -323,8 +323,7 @@ func (k *key) Sign(data []byte) (*ecdsaSigner, error) {
 
 // Verify - verifies the signature in r, s of hash using the public key, pub. Its
 // return value records whether the signature is valid.
-//
-func (k *key) Verify(hash []byte, sig *ecdsaSigner) bool {
+func (k *key) Verify(hash []byte, sig *Signer) bool {
 	pub, err := k.getPublicKey()
 	if err != nil {
 		panic(err)
@@ -341,7 +340,7 @@ func generateUUID() guuid.UUID {
 // getArtSignature ...
 func (k *key) getArtSignature() string {
 	usr, err := user.Current()
-	if err !=nil {
+	if err != nil {
 		return "--- path err ---"
 	}
 
@@ -398,8 +397,42 @@ func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	return publicKey, nil
 }
 
+// keyToGOB64 - take a pointer to an existing key and return it's entire body
+// object base64 encoded for storage.
+func keyToGOB64(k *key) (string, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+
+	if err := e.Encode(k); err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
+}
+
+// keyFromGOB64 - take a base64 encoded string and convert that to an object. We
+// need a way to handle updates here.
+func keyFromGOB64(str string) (*key, error) {
+	by, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return (*key)(nil), err
+	}
+
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+
+	var k *key
+
+	if err = d.Decode(&k); err != nil {
+		fmt.Println("failed gob Decode", err)
+	}
+
+	return k, nil
+}
+
 // PrintKeysTW - an elaborate way to display key information... not needed, but
-// nice for demos...
+// nice for demos and visually displays the key randomArt via a python script
 func PrintKeysTW(keys []KeyAPI) {
 	stylePairs := [][]table.Style{
 		{table.StyleColoredBright},

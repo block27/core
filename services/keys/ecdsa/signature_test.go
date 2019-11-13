@@ -8,7 +8,6 @@ import (
 
 var data []KeyRS
 
-
 type KeyRS struct {
 	DER string
 	R   string
@@ -37,7 +36,7 @@ func TestPointsFromDER(t *testing.T) {
 		R, _ := r.SetString(data[i].R, 16)
 		S, _ := s.SetString(data[i].S, 16)
 
-		sig := &ecdsaSigner{
+		sig := &Signer{
 			R: R, S: S,
 		}
 
