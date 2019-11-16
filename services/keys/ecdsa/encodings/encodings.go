@@ -21,16 +21,20 @@ var (
 	SDPublicKey  = "PUBLIC KEY"
 )
 
-/// importPublicKeyfromPEM ...
-func importPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
+// ImportPublicKeyfromPEM ...
+func ImportPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
 	block, _ := pem.Decode(pempub)
-	pubInterface, _ := x509.ParsePKIXPublicKey(block.Bytes)
+	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic(err)
+	}
+
 	pub := pubInterface.(*ecdsa.PublicKey)
 	return pub
 }
 
-// exportPublicKeytoPEM ...
-func exportPublicKeytoPEM(pub *ecdsa.PublicKey) []byte {
+// ExportPublicKeytoPEM ...
+func ExportPublicKeytoPEM(pub *ecdsa.PublicKey) []byte {
 	b, _ := x509.MarshalPKIXPublicKey(pub)
 	c := pem.Block{
 		Type:    ECPublicKey,

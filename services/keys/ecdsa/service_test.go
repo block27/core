@@ -44,6 +44,19 @@ func init() {
 	Config = c
 }
 
+func TestImportPublicECDSA(t *testing.T) {
+	pub, err := helpers.NewFile("../../../data/keys/ecdsa/pubkey.pem")
+	if err != nil {
+		t.Fail()
+	}
+
+	key, err := ImportPublicECDSA("some-name", pub.GetBody())
+	if key.Struct().Name != "some-name" {
+		t.Fail()
+	}
+
+}
+
 func TestNewECDSA(t *testing.T) {
 	k, err := NewECDSA(Config, "test-key-1", 256)
 	if err != nil {

@@ -95,6 +95,29 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
+// ImportPublicECDSA - function to import a publicKey...
+func ImportPublicECDSA(name string, public []byte) (KeyAPI, error) {
+	pub := encodings.ImportPublicKeyfromPEM(public)
+	_, pem := encodings.Encode(nil, pub)
+
+	// Resulting key will not be complete
+	// Create the key struct object
+	key := &key{
+		GID:            generateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeySize:        pub.Params().BitSize,
+		KeyType:        "ecdsa.PrivateKey",
+		Status:         statusActive,
+		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
+		FingerprintMD5: encodings.FingerprintMD5(pub),
+		FingerprintSHA: encodings.FingerprintSHA256(pub),
+		CreatedAt:      time.Now(),
+	}
+
+	return key, nil
+}
+
 // NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
