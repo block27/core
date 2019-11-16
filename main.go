@@ -13,7 +13,7 @@ func main() {
 	defer b.D.Close()
 
 	// Get and check credentials, speed is subjective to the serial comm
-	if err := b.ValidateKeys(); err != nil {
+	if err := b.HardwareAuthenticate(); err != nil {
 		panic(err)
 	}
 

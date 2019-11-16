@@ -36,7 +36,7 @@ func TestPointsFromDER(t *testing.T) {
 		R, _ := r.SetString(data[i].R, 16)
 		S, _ := s.SetString(data[i].S, 16)
 
-		sig := &Signer{
+		sig := &Signature{
 			R: R, S: S,
 		}
 

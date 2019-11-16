@@ -2,8 +2,10 @@ package backend
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/amanelis/bespin/config"
@@ -19,7 +21,7 @@ import (
 var (
 	// AESDevice - crypto key/iv provider.
 	//
-	AESDevice = "/dev/tty.usbmodem2002140"
+	AESDevice = "/dev/tty.usbmodem20021401"
 )
 
 // Backend - main struct for the entire application configuration
@@ -60,59 +62,7 @@ func NewBackend() (*Backend, error) {
 	return bc, nil
 }
 
-// RequestHardwareKeys ...
-//
-// This function calls the arduino board for the hardware keys via USB and
-// there are a few details to be noted:
-//
-// key can be returned in raw or in base64
-//
-// The format of the key  is {type}.Request.{byte|base}.{length to read}
-//
-// KEY:
-// key(base64) -> k.Request.base44 	// 44 bytes
-// key(raw) -> k.Request.byte32 		// 32 bytes
-//
-// IV:
-// iv(base64) -> i.Request.base24 	// 24 bytes
-// iv(raw) -> i.Request.byte16 			// 16 bytes
-func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	if !h.FileExists(AESDevice) {
-		return nil, fmt.Errorf("%s",
-			h.RedFgB("missing hardware AES device, cannot continue"))
-	}
-
-	c := serial.NewSerial(AESDevice, 115200)
-
-	// Request KEY
-	ky, ke := c.Request(serial.Request{
-		Method: "k.Request.byte32\r",
-		Size:   32,
-	})
-
-	if ke != nil {
-		return nil, ke
-	}
-
-	// Request IV
-	iv, ie := c.Request(serial.Request{
-		Method: "i.Request.byte16\r",
-		Size:   16,
-	})
-
-	if ie != nil {
-		return nil, ie
-	}
-
-	aes, err := crypto.NewAESCredentials(ky, iv)
-	if err != nil {
-		return nil, err
-	}
-
-	return aes, nil
-}
-
-// ValidateKeys ...
+// HardwareAuthenticate ...
 //
 // A Key/Iv will be stored on the hardware device itself. These two values
 // are used to encrypt the two pins stored in the ext volumes [BASE1, BASE2]
@@ -120,16 +70,17 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 // These values decrypted must match the two  pins stored on the hardware to
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
-func (b *Backend) ValidateKeys() error {
-	spinners, err := newSpinner(3)
+func (b *Backend) HardwareAuthenticate() error {
+	spinners, err := newSpinner(6)
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(spinners); i++ {
-		spinners[i].Start()
-	}
 
 	fmt.Printf("Begining AES hardware authentication...\n")
+
+	for i := 0; i < len(spinners); i++ {
+		go spinners[i].Start()
+	}
 
 	var extB1, extB2 string
 
@@ -225,11 +176,91 @@ func (b *Backend) ValidateKeys() error {
 	return nil
 }
 
+// LocateDevice ... temporary fix, but need to  find the AES device to  starts
+func (b *Backend) LocateDevice() (string, error) {
+	data, err := ioutil.ReadDir("/dev")
+	if err != nil {
+		return "", err
+	}
+
+	for _, f := range data {
+		if strings.Contains(f.Name(), "tty.usbmodem") {
+			return fmt.Sprintf("/dev/%s", f.Name()), nil
+		}
+	}
+
+	return "", nil
+}
+
+
+// RequestHardwareKeys ...
+//
+// This function calls the arduino board for the hardware keys via USB and
+// there are a few details to be noted:
+//
+// key can be returned in raw or in base64
+//
+// The format of the key  is {type}.Request.{byte|base}.{length to read}
+//
+// KEY:
+// key(base64) -> k.Request.base44 	// 44 bytes
+// key(raw) -> k.Request.byte32 		// 32 bytes
+//
+// IV:
+// iv(base64) -> i.Request.base24 	// 24 bytes
+// iv(raw) -> i.Request.byte16 			// 16 bytes
+func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
+	dev, err := b.LocateDevice()
+	if err != nil {
+		return nil, err
+	}
+
+	if !h.FileExists(dev) {
+		return nil, fmt.Errorf("%s",
+			h.RedFgB("missing hardware AES device, cannot continue"))
+	}
+
+	c := serial.NewSerial(AESDevice, 115200)
+
+	// Request KEY
+	ky, ke := c.Request(serial.Request{
+		Method: "k.Request.byte32\r",
+		Size:   32,
+	})
+
+	if ke != nil {
+		return nil, ke
+	}
+
+	// Request IV
+	iv, ie := c.Request(serial.Request{
+		Method: "i.Request.byte16\r",
+		Size:   16,
+	})
+
+	if ie != nil {
+		return nil, ie
+	}
+
+	aes, err := crypto.NewAESCredentials(ky, iv)
+	if err != nil {
+		return nil, err
+	}
+
+	return aes, nil
+}
+
 // Welcome - prints a nice welcome message with some info on environment
 func (b *Backend) Welcome() {
+	dev, err := b.LocateDevice()
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Printf("%s\n",
 		h.CyanFgB("----------------------------------------------------------------"))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Arch"), h.WhiteFgB(runtime.GOARCH))
+	fmt.Printf("%s: \t%s\n", h.GreenFgB("- AES DEV"), h.WhiteFgB(dev))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Compiler"), h.WhiteFgB(runtime.Compiler))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- CPUS"), h.WhiteFgB(runtime.NumCPU()))
 	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Crypto"), h.WhiteFgB(crypto.Devices[runtime.GOOS]))

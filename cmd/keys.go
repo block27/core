@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	// "crypto/md5"
-	// "crypto/sha256"
-	// "encoding/hex"
 	"fmt"
 	"time"
 
@@ -80,6 +77,9 @@ var keysCmd = &cobra.Command{
 var keysCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new key pair",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[CREATE]"))
+  },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, e := ecdsa.NewECDSA(*B.C, createName, createSize)
 		if e != nil {
@@ -93,6 +93,9 @@ var keysCreateCmd = &cobra.Command{
 var keysGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get key by identifier",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[GET]"))
+  },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
 		if e != nil {
@@ -106,6 +109,9 @@ var keysGetCmd = &cobra.Command{
 var keysListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all keys",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[LIST]"))
+  },
 	Run: func(cmd *cobra.Command, args []string) {
 		keys, err := ecdsa.ListECDSA(*B.C)
 		if err != nil {
@@ -123,6 +129,9 @@ var keysListCmd = &cobra.Command{
 var keysSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with Key",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[SIGN]"))
+  },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := ecdsa.GetECDSA(*B.C, signIdentifier)
 		if err != nil {
@@ -131,15 +140,15 @@ var keysSignCmd = &cobra.Command{
 
 		// Read the file ready be signed / this should probably be hashed
 		// if size > key bit size anyways.
-		data, derr := helpers.ReadBinary(signFilePath)
+		file, derr := helpers.NewFile(signFilePath)
 		if derr != nil {
 			panic(derr)
 		}
 
 		// Sign the data with the private key used internally
-		sig, err := key.Sign(data)
-		if err != nil {
-			panic(err)
+		sig, serr := key.Sign(file.GetBody())
+		if serr != nil {
+			panic(serr)
 		}
 
 		// Tell the sig receiver to asn1/der, this used for verification later
@@ -155,11 +164,22 @@ var keysSignCmd = &cobra.Command{
 			panic(err)
 		}
 
-		// B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
-		// B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
-		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x\n\t\tder=%s",
-			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S, derF)
-		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sig))
+		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
+			helpers.RedFgB(signFilePath), helpers.WhiteFgB(") = "),
+			helpers.GreenFgB(file.GetMD5()))
+
+		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
+			helpers.RedFgB(signFilePath), helpers.WhiteFgB(") = "),
+			helpers.GreenFgB(file.GetSHA()))
+
+		B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
+			helpers.WhiteFgB("=== Signature("),
+			helpers.RedFgB(derF),
+			helpers.WhiteFgB(")"),
+			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
+
+		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
+			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
 
 	},
 }
@@ -167,6 +187,9 @@ var keysSignCmd = &cobra.Command{
 var keysVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[VERIFY]"))
+  },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := ecdsa.GetECDSA(*B.C, verifyIdentifier)
 		if err != nil {
@@ -175,7 +198,7 @@ var keysVerifyCmd = &cobra.Command{
 
 		// Read the file ready be signed / this should probably be hashed
 		// if size > key bit size anyways.
-		data, derr := helpers.ReadBinary(verifyFilePath)
+		file, derr := helpers.NewFile(verifyFilePath)
 		if derr != nil {
 			panic(derr)
 		}
@@ -186,12 +209,21 @@ var keysVerifyCmd = &cobra.Command{
 			panic(derr)
 		}
 
-		// sig.MD5 = md5.Sum(data)
-		// sig.SHA = sha256.Sum256(data)
-		// B.L.Printf("SHA(%s) = %x", signFilePath, sig.SHA[:])
-		// B.L.Printf("MD5(%s) = %x", signFilePath, hex.EncodeToString(sig.MD5[:]))
-		B.L.Printf("Signature: \n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x\n\t\tder=%s",
-			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S, verifySignaturePath)
-		B.L.Printf("Verified: \n\t\t%t", key.Verify(data, sig))
+		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
+			helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
+			helpers.GreenFgB(file.GetMD5()))
+
+		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
+			helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
+			helpers.GreenFgB(file.GetSHA()))
+
+		B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
+			helpers.WhiteFgB("=== Signature("),
+			helpers.RedFgB(verifySignaturePath),
+			helpers.WhiteFgB(")"),
+			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
+
+		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
+			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
 	},
 }

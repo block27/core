@@ -4,12 +4,18 @@ import (
 	"testing"
 )
 
-func TestNewBackend(t *testing.T) {
-	backend, err := NewBackend()
-	if err != nil {
-		t.Fail()
-	}
+var backend *Backend
 
+func init() {
+	var err error
+
+	backend, err = NewBackend()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestNewBackend(t *testing.T) {
 	if backend.C == nil {
 		t.Fail()
 	}
@@ -23,14 +29,30 @@ func TestNewBackend(t *testing.T) {
 	}
 }
 
+// func TestLocateDevice(t *testing.T) {
+// 	backend, err := NewBackend()
+// 	if err != nil {
+// 		t.Fail()
+// 	}
+//
+// 	d, e := backend.LocateDevice()
+// 	if e != nil {
+// 		t.Fail()
+// 	}
+//
+// 	if !strings.Contains("/dev/tty.usbmodem", d) {
+// 		t.Fail()
+// 	}
+// }
+
+func TestHardwareAuthenticate(t *testing.T) {
+	t.SkipNow()
+}
+
 func TestRequestHardwareKeys(t *testing.T) {
 	t.SkipNow()
 }
 
-func TestRequestValidateKeys(t *testing.T) {
-	t.SkipNow()
-}
-
-func TestRequestWelcome(t *testing.T) {
+func TestWelcome(t *testing.T) {
 	t.SkipNow()
 }

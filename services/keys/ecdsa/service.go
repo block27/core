@@ -46,8 +46,8 @@ type KeyAPI interface {
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
 
-	Sign([]byte) (*Signer, error)
-	Verify([]byte, *Signer) bool
+	Sign([]byte) (*Signature, error)
+	Verify([]byte, *Signature) bool
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -302,18 +302,18 @@ func (k *key) Struct() *key {
 // private key's curve order, the hash will be truncated to that length.  It
 // returns the signature as a pair of integers{R,S}. The security of the private
 // key depends on the entropy of rand / which in this case we implement our own
-func (k *key) Sign(data []byte) (*Signer, error) {
+func (k *key) Sign(data []byte) (*Signature, error) {
 	pri, err := k.getPrivateKey()
 	if err != nil {
-		return (*Signer)(nil), err
+		return (*Signature)(nil), err
 	}
 
 	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
 	if err != nil {
-		return (*Signer)(nil), err
+		return (*Signature)(nil), err
 	}
 
-	return &Signer{
+	return &Signature{
 		// MD5: md5.Sum(data),
 		// SHA: sha256.Sum256(data),
 		R: r,
@@ -323,7 +323,7 @@ func (k *key) Sign(data []byte) (*Signer, error) {
 
 // Verify - verifies the signature in r, s of hash using the public key, pub. Its
 // return value records whether the signature is valid.
-func (k *key) Verify(hash []byte, sig *Signer) bool {
+func (k *key) Verify(hash []byte, sig *Signature) bool {
 	pub, err := k.getPublicKey()
 	if err != nil {
 		panic(err)

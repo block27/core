@@ -8,17 +8,6 @@ import (
 	"github.com/amanelis/bespin/helpers"
 )
 
-// Signer - top level signing object. Holds a bit of extra data, like sha
-// and md5 sum of the file/hash passing to be signed.
-type Signer struct {
-	// Hash the data file for continuity purposes
-	// SHA [32]byte
-	// MD5 [16]byte
-
-	// DER signature data
-	R, S *big.Int
-}
-
 // Signature - this struct is unique and must not be modified. ASN1 package
 // uses the exact format here to Marshall/Unmarshall data to and from and Must
 // only have {R,S} as types
@@ -28,28 +17,28 @@ type Signature struct {
 }
 
 // LoadSignature ...
-func LoadSignature(file string) (*Signer, error) {
+func LoadSignature(file string) (*Signature, error) {
 	// Read in the binary signature file containing {DER,R,S}
-	binF, err := helpers.ReadBinary(file)
+	binF, err := helpers.NewFile(file)
 	if err != nil {
-		return (*Signer)(nil), err
+		return (*Signature)(nil), err
 	}
 
 	// Create a temp struct to hold the decode, had lots of problems decoding to
 	// the needed ecdsaSigner struct ...
 	d := struct{ R, S *big.Int }{}
-	if _, err := asn1.Unmarshal(binF, &d); err != nil {
-		return (*Signer)(nil), err
+	if _, err := asn1.Unmarshal(binF.GetBody(), &d); err != nil {
+		return (*Signature)(nil), err
 	}
 
-	return &Signer{
+	return &Signature{
 		R: d.R,
 		S: d.S,
 	}, nil
 }
 
 // SigToDER ...
-func (e *Signer) SigToDER() ([]byte, error) {
+func (e *Signature) SigToDER() ([]byte, error) {
 	data, err := asn1.Marshal(*e)
 	if err != nil {
 		return nil, err
@@ -61,17 +50,19 @@ func (e *Signer) SigToDER() ([]byte, error) {
 // PointsToDER ...
 // Convert an ECDSA signature (points R and S) to a byte array using ASN.1 DER encoding.
 // This is a port of Bitcore's Key.rs2DER method.
-func (e *Signer) PointsToDER() []byte {
+func (e *Signature) PointsToDER() []byte {
 	// Ensure MSB doesn't break big endian encoding in DER sigs
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
 			b = []byte{0x00}
 		}
+
 		if b[0]&0x80 != 0 {
 			paddedBytes := make([]byte, len(b)+1)
 			copy(paddedBytes[1:], b)
 			b = paddedBytes
 		}
+
 		return b
 	}
 
@@ -97,7 +88,7 @@ func (e *Signer) PointsToDER() []byte {
 // Sometimes demarshalling using Golang's DEC to struct unmarshalling fails; this extracts R and S from the bytes
 // manually to prevent crashing.
 // This should NOT be a hex encoded byte array
-func (e *Signer) PointsFromDER(der []byte) (R, S *big.Int) {
+func (e *Signature) PointsFromDER(der []byte) (R, S *big.Int) {
 	R, S = &big.Int{}, &big.Int{}
 
 	data := asn1.RawValue{}

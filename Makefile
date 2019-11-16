@@ -16,6 +16,9 @@ GO_TEST_DIRS := $(shell \
 	xargs -I {} dirname {}  | \
 	uniq)
 
+VERSION = `cat VERSION`
+PACKAGE = github.com/amanelis/bespin
+
 # OK to be modified
 ENVIRONMENT?=develop
 NAMESPACE?=default
@@ -24,16 +27,21 @@ ifeq ($(ENVIRONMENT), develop)
 	NAMESPACE = develop
 endif
 
-.EXPORT_ALL_VARIABLES:
-
-all: configuration
-
 # Aliases
+all: configuration
 b: build
 t: test
+v: version
+
+.EXPORT_ALL_VARIABLES:
+.PHONY: all build build_all ctags test version
 
 build:
-	go build -o bin/sigma-cli main.go
+	@go build -o bin/sigma-cli main.go
+
+build_all:
+	@GOOS=darwin GOARCH=amd64 go build -x -o bin/sigma-cli-$(VERSION)-osx-64 main.go
+	@GOOS=linux  GOARCH=amd64 go build -x -o bin/sigma-cli-$(VERSION)-linux-64 main.go
 
 code_show:
 	@echo "SRC  = $(GO_SRC_DIRS)"
@@ -85,6 +93,9 @@ setup_machine:
 	mkdir -p /tmp/data
 	mkdir -p /var/data
 
+version:
+	@echo ${VERSION}
+
 # TESTING ----------------------------------------------------------------------
 test: test_richgo
 
@@ -95,10 +106,10 @@ test_coverage_html:
 	@go tool cover -html=coverage.out
 
 test_golang: prepare_tests
-	@go test -v ./... -cover -coverprofile=coverage.out -bench=.
+	@go test -v ./... -cover -coverprofile=coverage.out # -bench=.
 
 test_gotest: prepare_tests
-	@gotest -v ./... -cover -coverprofile=coverage.out -bench=.
+	@gotest -v ./... -cover -coverprofile=coverage.out # -bench=.
 
 test_richgo: prepare_tests
-	@richgo test -v ./... -cover -coverprofile=coverage.out -bench=.
+	@richgo test -v ./... -cover -coverprofile=coverage.out # -bench=.
