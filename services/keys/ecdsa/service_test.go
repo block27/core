@@ -44,17 +44,35 @@ func init() {
 	Config = c
 }
 
-func TestImportPublicECDSA(t *testing.T) {
-	pub, err := helpers.NewFile("../../../data/keys/ecdsa/pubkey.pem")
+func TestNewECDSABlank(t *testing.T) {
+	result, err := NewECDSABlank(Config)
 	if err != nil {
 		t.Fail()
 	}
 
-	key, err := ImportPublicECDSA("some-name", pub.GetBody())
-	if key.Struct().Name != "some-name" {
+	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
+	assert.Equal(t, result.Struct().Name, "")
+	assert.Equal(t, result.Struct().Slug, "")
+	assert.Equal(t, result.Struct().Status, "")
+	assert.Equal(t, result.Struct().KeySize, 0)
+	assert.Equal(t, result.Struct().FingerprintMD5, "")
+	assert.Equal(t, result.Struct().FingerprintSHA, "")
+}
+
+func TestImportPublicECDSA(t *testing.T) {
+	pub, err := helpers.NewFile("../../../data/keys/ecdsa/prime256v1-pubkey.pem")
+	if err != nil {
 		t.Fail()
 	}
 
+	k1, e := ImportPublicECDSA("some-name", pub.GetBody())
+	if e != nil {
+		t.Fail()
+	}
+
+	if k1.Struct().Name != "some-name" {
+		t.Fail()
+	}
 }
 
 func TestNewECDSA(t *testing.T) {
@@ -252,21 +270,6 @@ func BenchmarkVerifyP521(b *testing.B) {
 			}
 		}
 	})
-}
-
-func TestNewECDSABlank(t *testing.T) {
-	result, err := NewECDSABlank(Config)
-	if err != nil {
-		t.Fail()
-	}
-
-	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
-	assert.Equal(t, result.Struct().Name, "")
-	assert.Equal(t, result.Struct().Slug, "")
-	assert.Equal(t, result.Struct().Status, "")
-	assert.Equal(t, result.Struct().KeySize, 0)
-	assert.Equal(t, result.Struct().FingerprintMD5, "")
-	assert.Equal(t, result.Struct().FingerprintSHA, "")
 }
 
 func TestGetECDSA(t *testing.T) {

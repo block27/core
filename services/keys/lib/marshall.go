@@ -14,7 +14,6 @@ func DecodePublicKey(encodedKey []byte) (*ecdsa.PublicKey, error) {
 	block, _ := pem.Decode(encodedKey)
 	if block == nil || block.Type != "PUBLIC KEY" {
 		return nil, fmt.Errorf("marshal: could not decode PEM block type %s", block.Type)
-
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)

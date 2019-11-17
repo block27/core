@@ -22,6 +22,7 @@ import (
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/services/keys/ecdsa/encodings"
+	keys "github.com/amanelis/bespin/services/keys/lib"
 
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
@@ -79,6 +80,9 @@ type key struct {
 	PrivateKeyB64 string // B64 of private key
 	PublicKeyB64  string // B64 of public key
 
+	PrivateKeyHEX string
+	PublicKeyHEX  string
+
 	CreatedAt time.Time
 
 	// Used as place holder converstions during Sign/Verify
@@ -95,13 +99,26 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
-// ImportPublicECDSA - function to import a publicKey...
+// ImportPublicECDSA - import an existing ECDSA key into a KeyAPI object for
+// use in the Service API. Since you are importing a public Key, this will be
+// an incomplete Key object.
 func ImportPublicECDSA(name string, public []byte) (KeyAPI, error) {
-	pub := encodings.ImportPublicKeyfromPEM(public)
+	if name == "" {
+		return nil, fmt.Errorf("name cannot be empty")
+	}
+
+	pub, err := keys.DecodePublicKey(public)
+	if err != nil {
+		return nil, err
+	}
+
+	if pub.Params().BitSize == 0 {
+		return nil, fmt.Errorf("key bitsize invalid, most likely incorrect pem/der format")
+	}
+
 	_, pem := encodings.Encode(nil, pub)
 
-	// Resulting key will not be complete
-	// Create the key struct object
+	// Resulting key will not be complete - create the key struct object anyways
 	key := &key{
 		GID:            generateUUID(),
 		Name:           name,
@@ -125,12 +142,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 	// Real key generation, need to eventually pipe in the rand.Reader
 	// generated from PRNG and hardware devices
 	var curve elliptic.Curve
-
-	// Binary 224, 256, 384, and 521
-	// Prime 233, 283, 409, and 571
 	switch size {
-	case 224:
-		curve = elliptic.P224()
 	case 256:
 		curve = elliptic.P256()
 	case 384:

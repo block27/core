@@ -22,50 +22,57 @@ var (
 )
 
 // ImportPublicKeyfromPEM ...
-func ImportPublicKeyfromPEM(pempub []byte) *ecdsa.PublicKey {
+func ImportPublicKeyfromPEM(pempub []byte) (*ecdsa.PublicKey, error) {
 	block, _ := pem.Decode(pempub)
-	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	objct, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	pub := pubInterface.(*ecdsa.PublicKey)
-	return pub
+	return objct.(*ecdsa.PublicKey), nil
 }
 
 // ExportPublicKeytoPEM ...
-func ExportPublicKeytoPEM(pub *ecdsa.PublicKey) []byte {
-	b, _ := x509.MarshalPKIXPublicKey(pub)
+func ExportPublicKeytoPEM(pub *ecdsa.PublicKey) ([]byte, error) {
+	b, e := x509.MarshalPKIXPublicKey(pub)
+	if e != nil {
+		return nil, e
+	}
+
 	c := pem.Block{
 		Type:    ECPublicKey,
 		Headers: nil,
 		Bytes:   b,
 	}
 
-	return pem.EncodeToMemory(&c)
+	return pem.EncodeToMemory(&c), nil
 }
 
-// importPrivateKeyfromPEM ...
-func importPrivateKeyfromPEM(pemsec []byte) *ecdsa.PrivateKey {
+// ImportPrivateKeyfromPEM ...
+func ImportPrivateKeyfromPEM(pemsec []byte) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode(pemsec)
-	sec, _ := x509.ParseECPrivateKey(block.Bytes)
-	return sec
+	sec, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return sec, nil
 }
 
-// exportPrivateKeytoPEM ...
-func exportPrivateKeytoPEM(sec *ecdsa.PrivateKey) []byte {
-	l, _ := x509.MarshalECPrivateKey(sec)
+// ExportPrivateKeytoPEM ...
+func ExportPrivateKeytoPEM(sec *ecdsa.PrivateKey) ([]byte, error) {
+	l, e := x509.MarshalECPrivateKey(sec)
+	if e != nil {
+		return nil, e
+	}
+
 	m := pem.Block{
 		Type:    ECPrivateKey,
 		Headers: nil,
 		Bytes:   l,
 	}
-	n := pem.EncodeToMemory(&m)
 
-	keypem, _ := os.OpenFile("sec.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	pem.Encode(keypem, &pem.Block{Type: ECPrivateKey, Bytes: l})
-
-	return n
+	return pem.EncodeToMemory(&m), nil
 }
 
 // importPrivateKeyfromEncryptedPEM ...
@@ -124,6 +131,14 @@ func FingerprintSHA256(publicKey *ecdsa.PublicKey) string {
 
 // Encode ...
 func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+	if privateKey == nil {
+		privateKey = &ecdsa.PrivateKey{}
+	}
+
+	if publicKey == nil {
+		publicKey = &ecdsa.PublicKey{}
+	}
+
 	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: ECPrivateKey, Bytes: x509Encoded})
 
