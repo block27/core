@@ -192,7 +192,6 @@ func (b *Backend) LocateDevice() (string, error) {
 	return "", nil
 }
 
-
 // RequestHardwareKeys ...
 //
 // This function calls the arduino board for the hardware keys via USB and
@@ -220,7 +219,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 			h.RedFgB("missing hardware AES device, cannot continue"))
 	}
 
-	c := serial.NewSerial(AESDevice, 115200)
+	c := serial.NewSerial(dev, 115200)
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
