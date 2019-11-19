@@ -44,6 +44,7 @@ func init() {
 	keysCmd.AddCommand(keysListCmd)
 	keysCmd.AddCommand(keysSignCmd)
 	keysCmd.AddCommand(keysVerifyCmd)
+	keysCmd.AddCommand(keysImportPubCmd)
 }
 
 func initConfig() {

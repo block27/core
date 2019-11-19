@@ -74,7 +74,7 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> prime256v1" {
+	if k1.Struct().KeyType != "ecdsa.PublicKey <==> prime256v1" {
 		t.Fail()
 	}
 
@@ -96,7 +96,7 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> secp384r1" {
+	if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp384r1" {
 		t.Fail()
 	}
 
@@ -109,23 +109,55 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 		t.Fail()
 	}
 
+	// Empty "name"
+	_, e := ImportPublicECDSA("", "secp521r1", pub.GetBody())
+	if e == nil {
+		t.Fatal(e)
+	}
+
+	// Empty "curve"
+	_, r := ImportPublicECDSA("some-name", "", pub.GetBody())
+	if r == nil {
+		t.Fatal(r)
+	}
+
+	// Invalid curve
+	_, p := ImportPublicECDSA("some-name", "junk1024r1", pub.GetBody())
+	if p == nil {
+		t.Fatal(p)
+	}
+
+	// Invalid pub
+	_, j := ImportPublicECDSA("some-name", "secp521r1", []byte("junk..."))
+	if j == nil {
+		t.Fatal(j)
+	}
+
+	// Valid key
 	k1, e := ImportPublicECDSA("some-name", "secp521r1", pub.GetBody())
 	if e != nil {
-		t.Fail()
+		t.Fatal(e)
 	}
 
 	if k1.Struct().Name != "some-name" {
-		t.Fail()
+		t.Fatalf("k1.Struct().Name did not equal expected valud: %s", k1.Struct().Name)
 	}
 
-	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> secp521r1" {
-		t.Fail()
+	if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp521r1" {
+		t.Fatal("invalid key type")
 	}
 
 	t.Log("successfully imported [secp521r1-pubkey]")
 }
 
 func TestNewECDSA(t *testing.T) {
+	// Invalid curve
+	_, q := NewECDSA(Config, "test-key-1", "prim56v1")
+	if q == nil {
+		t.Fatal("invalid curve")
+	}
+
+	// Valid
 	k, err := NewECDSA(Config, "test-key-1", "prime256v1")
 	if err != nil {
 		t.Fail()

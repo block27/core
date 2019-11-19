@@ -120,10 +120,6 @@ func ImportPublicECDSA(name string, curve string, public []byte) (KeyAPI, error)
 		return nil, err
 	}
 
-	if pub.Params().BitSize == 0 {
-		return nil, fmt.Errorf("key bitsize invalid, most likely incorrect pem/der format")
-	}
-
 	_, pem := encodings.Encode(nil, pub)
 
 	// Resulting key will not be complete - create the key struct object anyways
@@ -131,7 +127,7 @@ func ImportPublicECDSA(name string, curve string, public []byte) (KeyAPI, error)
 		GID:            generateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
+		KeyType:        fmt.Sprintf("ecdsa.PublicKey <==> %s", ty),
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
 		FingerprintMD5: encodings.FingerprintMD5(pub),
@@ -245,6 +241,15 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 
 	return key, nil
 }
+
+
+// writeToFS
+func (k *key) writeToFS() error {
+
+	return  nil
+}
+
+
 
 // GetECDSA - fetch a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
@@ -421,8 +426,10 @@ func (k *key) getPrivateKey() (*ecdsa.PrivateKey, error) {
 	}
 
 	block, _ := pem.Decode([]byte(by))
-	x509Encoded := block.Bytes
-	tempKey, _ := x509.ParseECPrivateKey(x509Encoded)
+	tempKey, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return (*ecdsa.PrivateKey)(nil), err
+	}
 
 	return tempKey, nil
 }
@@ -435,11 +442,12 @@ func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	}
 
 	blockPub, _ := pem.Decode([]byte(by))
-	x509EncodedPub := blockPub.Bytes
-	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
-	publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	genericPublicKey, err := x509.ParsePKIXPublicKey(blockPub.Bytes)
+	if err != nil {
+		return (*ecdsa.PublicKey)(nil), err
+	}
 
-	return publicKey, nil
+	return genericPublicKey.(*ecdsa.PublicKey), nil
 }
 
 // keyToGOB64 - take a pointer to an existing key and return it's entire body
@@ -486,6 +494,20 @@ func PrintKeysTW(keys []KeyAPI) {
 	for ndx, f := range keys {
 		tw := table.NewWriter()
 
+		var pr string
+		if f.Struct().PrivateKeyB64 == "" {
+			pr = "... ... ... ... ... ... ... ... ... ... ... ..."
+		} else {
+			pr = f.Struct().PrivateKeyB64[0:47]
+		}
+
+		var pu string
+		if f.Struct().PublicKeyB64 == "" {
+			pu = "... ... ... ... ... ... ... ... ... ... ... ..."
+		} else {
+			pu = f.Struct().PublicKeyB64[0:47]
+		}
+
 		tw.SetTitle(f.Struct().FilePointer())
 		tw.AppendRows([]table.Row{
 			{
@@ -502,11 +524,11 @@ func PrintKeysTW(keys []KeyAPI) {
 			},
 			{
 				"PrivateKey",
-				f.Struct().PrivateKeyB64[0:47],
+				pr,
 			},
 			{
 				"PublicKey",
-				f.Struct().PublicKeyB64[0:47],
+				pu,
 			},
 			{
 				"MD5",

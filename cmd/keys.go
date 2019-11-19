@@ -30,6 +30,11 @@ var (
 	verifyIdentifier    string
 	verifyFilePath      string
 	verifySignaturePath string
+
+	// ImportPub flags
+	importPubName		string
+	importPubCurve 	string
+	importPubFile		string
 )
 
 func init() {
@@ -60,6 +65,11 @@ func init() {
 	keysVerifyCmd.MarkFlagRequired("identifier")
 	keysVerifyCmd.MarkFlagRequired("file")
 	keysVerifyCmd.MarkFlagRequired("signature")
+
+	// ImportPub flags  ...
+	keysImportPubCmd.Flags().StringVarP(&importPubName, "name", "n", "", "name required")
+	keysImportPubCmd.Flags().StringVarP(&importPubCurve, "curve", "c", "", "curve required")
+	keysImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "p", "", "publicKey required")
 }
 
 var keysCmd = &cobra.Command{
@@ -224,5 +234,26 @@ var keysVerifyCmd = &cobra.Command{
 
 		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
 			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
+	},
+}
+
+var keysImportPubCmd = &cobra.Command{
+	Use:   "importPub",
+	Short: "Import a public key",
+	PreRun: func(cmd *cobra.Command, args []string) {
+    B.L.Printf("%s", helpers.CyanFgB("=== Keys[IMPORT:PUB]"))
+  },
+	Run: func(cmd *cobra.Command, args []string) {
+		pub, err := helpers.NewFile(importPubFile)
+		if err !=nil {
+			panic(err)
+		}
+
+		key, err := ecdsa.ImportPublicECDSA(importPubName, importPubCurve, pub.GetBody())
+		if err != nil {
+			panic(err)
+		}
+
+		ecdsa.PrintKeyTW(key.Struct())
 	},
 }
