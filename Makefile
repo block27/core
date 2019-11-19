@@ -77,8 +77,11 @@ openssl_cpu_speed:
 openssl_hardware_accelerated:
 	openssl speed -elapsed -evp aes-128-cbc
 
-openssl_check:
+openssl_check_signature:
 	openssl asn1parse -inform der -in signature.der
+
+openssl_check_ecdsa_private_key:
+	openssl ec -in private.pem -text -noout
 
 openssl_sign:
 	openssl dgst -sha1 -sign private.pem < file.data > signature.bin

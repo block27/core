@@ -12,9 +12,9 @@ import (
 
 var (
 	// Create flags ...
-	createName string
-	createType string
-	createSize int
+	createName  string
+	createType  string
+	createCurve string
 
 	// List flags ...
 	// ...
@@ -34,9 +34,9 @@ var (
 
 func init() {
 	// Create flags ...
-	keysCreateCmd.Flags().StringVarP(&createName, "name", "n", "", "name required")
-	keysCreateCmd.Flags().StringVarP(&createType, "type", "t", "ecdsa", "type")
-	keysCreateCmd.Flags().IntVarP(&createSize, "size", "s", 256, "size")
+	keysCreateCmd.Flags().StringVarP(&createName,  "name", "n", "", "name required")
+	keysCreateCmd.Flags().StringVarP(&createType,  "type", "t", "ecdsa", "type")
+	keysCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "size")
 	keysCreateCmd.MarkFlagRequired("name")
 	keysCreateCmd.MarkFlagRequired("type")
 
@@ -81,7 +81,7 @@ var keysCreateCmd = &cobra.Command{
     B.L.Printf("%s", helpers.CyanFgB("=== Keys[CREATE]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
-		key, e := ecdsa.NewECDSA(*B.C, createName, createSize)
+		key, e := ecdsa.NewECDSA(*B.C, createName, createCurve)
 		if e != nil {
 			panic(e)
 		}
@@ -178,9 +178,8 @@ var keysSignCmd = &cobra.Command{
 			helpers.WhiteFgB(")"),
 			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 
-		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
-			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
-
+		// B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
+		// 	helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
 	},
 }
 
@@ -209,19 +208,19 @@ var keysVerifyCmd = &cobra.Command{
 			panic(derr)
 		}
 
-		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
-			helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
-			helpers.GreenFgB(file.GetMD5()))
-
-		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
-			helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
-			helpers.GreenFgB(file.GetSHA()))
-
-		B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-			helpers.WhiteFgB("=== Signature("),
-			helpers.RedFgB(verifySignaturePath),
-			helpers.WhiteFgB(")"),
-			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
+		// B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
+		// 	helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
+		// 	helpers.GreenFgB(file.GetMD5()))
+		//
+		// B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
+		// 	helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
+		// 	helpers.GreenFgB(file.GetSHA()))
+		//
+		// B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
+		// 	helpers.WhiteFgB("=== Signature("),
+		// 	helpers.RedFgB(verifySignaturePath),
+		// 	helpers.WhiteFgB(")"),
+		// 	len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 
 		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
 			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))

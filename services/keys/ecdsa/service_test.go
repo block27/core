@@ -35,7 +35,7 @@ func init() {
 		panic(fmt.Errorf("test [environment] is not in [test] mode"))
 	}
 
-	k1, err := NewECDSA(c, "test-key-0", 256)
+	k1, err := NewECDSA(c, "test-key-0", "prime256v1")
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func TestNewECDSABlank(t *testing.T) {
 	assert.Equal(t, result.Struct().Name, "")
 	assert.Equal(t, result.Struct().Slug, "")
 	assert.Equal(t, result.Struct().Status, "")
-	// assert.Equal(t, result.Struct().KeySize, 0)
+	assert.Equal(t, result.Struct().KeyType, "")
 	assert.Equal(t, result.Struct().FingerprintMD5, "")
 	assert.Equal(t, result.Struct().FingerprintSHA, "")
 }
@@ -65,7 +65,7 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA("some-name", pub.GetBody())
+	k1, e := ImportPublicECDSA("some-name", "prime256v1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
@@ -74,29 +74,12 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	if k1.Struct().KeySize != 256 {
+	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> prime256v1" {
 		t.Fail()
 	}
 
 	t.Log("successfully imported [prime256v1-pubkey]")
 }
-
-// func TestImportPublicECDSA256k1(t *testing.T) {
-// 	pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp256k1-1-pubkey.pem")
-// 	if err != nil {
-// 		t.Log(err)
-// 		t.Fail()
-// 	}
-//
-// 	k1, e := ImportPublicECDSA("some-name", pub.GetBody())
-// 	if e != nil {
-// 		t.Fail()
-// 	}
-//
-// 	fmt.Println(k1.getPublicKey())
-//
-// 	t.Log("successfully imported [secp384r1-pubkey]")
-// }
 
 func TestImportPublicECDSA384r1(t *testing.T) {
 	pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp384r1-pubkey.pem")
@@ -104,7 +87,7 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA("some-name", pub.GetBody())
+	k1, e := ImportPublicECDSA("some-name", "secp384r1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
@@ -113,7 +96,7 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	if k1.Struct().KeySize != 384 {
+	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> secp384r1" {
 		t.Fail()
 	}
 
@@ -126,7 +109,7 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA("some-name", pub.GetBody())
+	k1, e := ImportPublicECDSA("some-name", "secp521r1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
@@ -135,7 +118,7 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 		t.Fail()
 	}
 
-	if k1.Struct().KeySize != 521 {
+	if k1.Struct().KeyType != "ecdsa.PrivateKey <==> secp521r1" {
 		t.Fail()
 	}
 
@@ -143,7 +126,7 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 }
 
 func TestNewECDSA(t *testing.T) {
-	k, err := NewECDSA(Config, "test-key-1", 256)
+	k, err := NewECDSA(Config, "test-key-1", "prime256v1")
 	if err != nil {
 		t.Fail()
 	}
@@ -163,7 +146,7 @@ func BenchmarkSignP224(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-224", 224)
+	k, err := NewECDSA(Config, "test-key-224", "secp224r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -186,7 +169,7 @@ func BenchmarkSignP256(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-256", 256)
+	k, err := NewECDSA(Config, "test-key-256", "prime256v1")
 	if err != nil {
 		b.Fail()
 	}
@@ -209,7 +192,7 @@ func BenchmarkSignP384(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-384", 384)
+	k, err := NewECDSA(Config, "test-key-384", "secp384r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -232,7 +215,7 @@ func BenchmarkSignP521(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-521", 521)
+	k, err := NewECDSA(Config, "test-key-521", "secp521r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -255,7 +238,7 @@ func BenchmarkVerifyP224(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-224", 224)
+	k, err := NewECDSA(Config, "test-key-224", "secp224r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -277,7 +260,7 @@ func BenchmarkVerifyP256(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-256", 256)
+	k, err := NewECDSA(Config, "test-key-256", "prime256v1")
 	if err != nil {
 		b.Fail()
 	}
@@ -299,7 +282,7 @@ func BenchmarkVerifyP384(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-384", 384)
+	k, err := NewECDSA(Config, "test-key-384", "secp384r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -321,7 +304,7 @@ func BenchmarkVerifyP521(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-521", 521)
+	k, err := NewECDSA(Config, "test-key-521", "secp521r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -351,7 +334,7 @@ func TestGetECDSA(t *testing.T) {
 }
 
 func TestListECDSA(t *testing.T) {
-	_, err := NewECDSA(Config, "context-key", 256)
+	_, err := NewECDSA(Config, "context-key", "prime256v1")
 	if err != nil {
 		t.Fail()
 	}

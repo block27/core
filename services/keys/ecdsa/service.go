@@ -67,7 +67,6 @@ type key struct {
 	Status string
 
 	// Basically the elliptic curve size of the key
-	KeySize int
 	KeyType string
 
 	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
@@ -102,9 +101,18 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 // ImportPublicECDSA - import an existing ECDSA key into a KeyAPI object for
 // use in the Service API. Since you are importing a public Key, this will be
 // an incomplete Key object.
-func ImportPublicECDSA(name string, public []byte) (KeyAPI, error) {
+func ImportPublicECDSA(name string, curve string, public []byte) (KeyAPI, error) {
 	if name == "" {
 		return nil, fmt.Errorf("name cannot be empty")
+	}
+
+	if curve == "" {
+		return nil, fmt.Errorf("curve cannot be empty")
+	}
+
+	_, ty, err := getCurve(curve)
+	if err != nil {
+		return nil,  err
 	}
 
 	pub, err := keys.DecodePublicKey(public)
@@ -123,8 +131,7 @@ func ImportPublicECDSA(name string, public []byte) (KeyAPI, error) {
 		GID:            generateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeySize:        pub.Params().BitSize,
-		KeyType:        "ecdsa.PrivateKey",
+		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
 		FingerprintMD5: encodings.FingerprintMD5(pub),
@@ -138,22 +145,13 @@ func ImportPublicECDSA(name string, public []byte) (KeyAPI, error) {
 // NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
-func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
-	// Real key generation, need to eventually pipe in the rand.Reader
-	// generated from PRNG and hardware devices
-	var curve elliptic.Curve
-	switch size {
-	case 256:
-		curve = elliptic.P256()
-	case 384:
-		curve = elliptic.P384()
-	case 521:
-		curve = elliptic.P521()
-	default:
-		return nil, fmt.Errorf("%s", helpers.RedFgB("incorrect curve size passed"))
+func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) {
+	ec, ty, err := getCurve(curve)
+	if err != nil {
+		return nil,  err
 	}
 
-	pri, err := ecdsa.GenerateKey(curve, crypto.Reader)
+	pri, err := ecdsa.GenerateKey(ec, crypto.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +167,7 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		GID:            generateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeySize:        pri.Params().BitSize,
-		KeyType:        "ecdsa.PrivateKey",
+		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
 		Status:         statusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
@@ -220,21 +217,12 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		return nil, pemErr
 	}
 
-	pemkey := &pem.Block{
+	// Create pem file
+	if  e := pem.Encode(pemfile, &pem.Block{
 		Type:  encodings.ECPrivateKey,
 		Bytes: pem509,
-	}
-
-	// Create pem file
-	e := pem.Encode(pemfile, pemkey)
-	if e != nil {
+	}); e != nil {
 		return nil, e
-	}
-
-	// Marshall the objects
-	obj, err := keyToGOB64(key)
-	if err != nil {
-		return nil, err
 	}
 
 	// Write data to file
@@ -244,6 +232,12 @@ func NewECDSA(c config.ConfigReader, name string, size int) (KeyAPI, error) {
 		return nil, err
 	}
 	defer objFile.Close()
+
+	// Marshall the objects
+	obj, err := keyToGOB64(key)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
 		return nil, err
@@ -365,6 +359,22 @@ func (k *key) Verify(hash []byte, sig *Signature) bool {
 	}
 
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
+}
+
+// getCurve checks the string param matched and should return a valid ec curve
+func getCurve(curve string) (elliptic.Curve, string, error) {
+	switch curve {
+	case "secp224r1":  // secp224r1: NIST/SECG curve over a 224 bit prime field
+		return elliptic.P224(), "secp224r1", nil
+	case "prime256v1": // prime256v1: X9.62/SECG curve over a 256 bit prime field
+		return elliptic.P256(), "prime256v1", nil
+	case "secp384r1":  // secp384r1: NIST/SECG curve over a 384 bit prime field
+		return elliptic.P384(), "secp384r1", nil
+	case "secp521r1":  // secp521r1: NIST/SECG curve over a 521 bit prime field
+		return elliptic.P521(), "secp521r1", nil
+	default:
+		return nil, "", fmt.Errorf("%s", helpers.RedFgB("incorrect curve size passed"))
+	}
 }
 
 // generateUUID - generate and return a valid GUUID
@@ -491,10 +501,6 @@ func PrintKeysTW(keys []KeyAPI) {
 				helpers.RedFgB(f.Struct().KeyType),
 			},
 			{
-				"Curve",
-				helpers.RedFgB(f.Struct().KeySize),
-			},
-			{
 				"PrivateKey",
 				f.Struct().PrivateKeyB64[0:47],
 			},
@@ -550,7 +556,6 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
 	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
 	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key Size: %s", helpers.RedFgB(k.Struct().KeySize))
 	l.Infof("Key Type: %s", helpers.RedFgB(k.Struct().KeyType))
 	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
 	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
