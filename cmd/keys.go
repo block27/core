@@ -156,7 +156,7 @@ var keysSignCmd = &cobra.Command{
 		}
 
 		// Sign the data with the private key used internally
-		sig, serr := key.Sign(file.GetBody())
+		sig, serr := key.Sign([]byte(file.GetSHA()))
 		if serr != nil {
 			panic(serr)
 		}
@@ -233,7 +233,7 @@ var keysVerifyCmd = &cobra.Command{
 		// 	len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 
 		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
-			helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
+			helpers.GreenFgB(key.Verify([]byte(file.GetSHA()), sig)))
 	},
 }
 
