@@ -218,20 +218,6 @@ var keysVerifyCmd = &cobra.Command{
 			panic(derr)
 		}
 
-		// B.L.Printf("%s%s%s%s", h.WhiteFgB("=== MD5("),
-		// 	h.RedFgB(verifyFilePath), h.WhiteFgB(") = "),
-		// 	h.GreenFgB(file.GetMD5()))
-		//
-		// B.L.Printf("%s%s%s%s", h.WhiteFgB("=== SHA("),
-		// 	h.RedFgB(verifyFilePath), h.WhiteFgB(") = "),
-		// 	h.GreenFgB(file.GetSHA()))
-		//
-		// B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-		// 	h.WhiteFgB("=== Signature("),
-		// 	h.RedFgB(verifySignaturePath),
-		// 	h.WhiteFgB(")"),
-		// 	len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
-
 		B.L.Printf("%s%s", h.WFgB("=== Verified: "),
 			h.GFgB(key.Verify([]byte(file.GetSHA()), sig)))
 	},
