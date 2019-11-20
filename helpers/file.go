@@ -33,7 +33,7 @@ type file struct {
 // NewFile returns a new object of File interface
 func NewFile(path string) (File, error)  {
 	if !FileExists(path) {
-		return nil, fmt.Errorf("%s", RedFgB("invalid or missing file"))
+		return nil, fmt.Errorf("%s", RFgB("invalid or missing file"))
 	}
 
 	//  Create our new instance of file
@@ -43,7 +43,7 @@ func NewFile(path string) (File, error)  {
 
 	data, err := f.ReadBinary(path)
 	if err != nil {
-		return nil, fmt.Errorf("%s", RedFgB("error reading file"))
+		return nil, fmt.Errorf("%s", RFgB("error reading file"))
 	}
 
 	f.Body = data

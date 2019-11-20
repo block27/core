@@ -265,12 +265,12 @@ func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa
 func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return (*key)(nil), fmt.Errorf("%s", helpers.RedFgB("invalid key path"))
+		return (*key)(nil), fmt.Errorf("%s", helpers.RFgB("invalid key path"))
 	}
 
 	data, err := helpers.ReadFile(fmt.Sprintf("%s/obj.bin", dirPath))
 	if err != nil {
-		return (*key)(nil), fmt.Errorf("%s", helpers.RedFgB("invalid key object"))
+		return (*key)(nil), fmt.Errorf("%s", helpers.RFgB("invalid key object"))
 	}
 
 	obj, err := keyFromGOB64(data)
@@ -386,7 +386,7 @@ func getCurve(curve string) (elliptic.Curve, string, error) {
 	case "secp521r1":  // secp521r1: NIST/SECG curve over a 521 bit prime field
 		return elliptic.P521(), "secp521r1", nil
 	default:
-		return nil, "", fmt.Errorf("%s", helpers.RedFgB("incorrect curve size passed"))
+		return nil, "", fmt.Errorf("%s", helpers.RFgB("incorrect curve size passed"))
 	}
 }
 
@@ -528,7 +528,7 @@ func PrintKeysTW(keys []KeyAPI) {
 			},
 			{
 				"Type",
-				helpers.RedFgB(f.Struct().KeyType),
+				helpers.RFgB(f.Struct().KeyType),
 			},
 			{
 				"PrivateKey",
@@ -583,17 +583,17 @@ func PrintKeyTW(k *key) {
 
 // PrintKey - helper function to print a key
 func PrintKey(k *key, l *logrus.Logger) {
-	l.Infof("Key GID: %s", helpers.MagentaFgD(k.FilePointer()))
-	l.Infof("Key MD5: %s", helpers.MagentaFgD(k.Struct().FingerprintMD5))
-	l.Infof("Key SHA: %s", helpers.MagentaFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key Type: %s", helpers.RedFgB(k.Struct().KeyType))
-	l.Infof("Key Name: %s", helpers.YellowFgB(k.Struct().Name))
-	l.Infof("Key Slug: %s", helpers.YellowFgB(k.Struct().Slug))
-	l.Infof("Key Status: %s", helpers.YellowFgB(k.Struct().Status))
-	l.Infof("Key Created: %s", helpers.YellowFgB(k.Struct().CreatedAt))
-	l.Infof("	%s privateKey: %s......", helpers.RedFgB(">"), k.Struct().PrivateKeyB64[0:64])
-	l.Infof("	%s publicKey:  %s......", helpers.RedFgB(">"), k.Struct().PublicKeyB64[0:64])
-	l.Infof("	%s privatePemPath: %s", helpers.RedFgB(">"), k.Struct().PrivatePemPath)
-	l.Infof("	%s privateKeyPath: %s", helpers.RedFgB(">"), k.Struct().PrivateKeyPath)
-	l.Infof("	%s publicKeyPath:  %s", helpers.RedFgB(">"), k.Struct().PublicKeyPath)
+	l.Infof("Key GID: %s", helpers.MFgD(k.FilePointer()))
+	l.Infof("Key MD5: %s", helpers.MFgD(k.Struct().FingerprintMD5))
+	l.Infof("Key SHA: %s", helpers.MFgD(k.Struct().FingerprintSHA))
+	l.Infof("Key Type: %s", helpers.RFgB(k.Struct().KeyType))
+	l.Infof("Key Name: %s", helpers.YFgB(k.Struct().Name))
+	l.Infof("Key Slug: %s", helpers.YFgB(k.Struct().Slug))
+	l.Infof("Key Status: %s", helpers.YFgB(k.Struct().Status))
+	l.Infof("Key Created: %s", helpers.YFgB(k.Struct().CreatedAt))
+	l.Infof("	%s privateKey: %s......", helpers.RFgB(">"), k.Struct().PrivateKeyB64[0:64])
+	l.Infof("	%s publicKey:  %s......", helpers.RFgB(">"), k.Struct().PublicKeyB64[0:64])
+	l.Infof("	%s privatePemPath: %s", helpers.RFgB(">"), k.Struct().PrivatePemPath)
+	l.Infof("	%s privateKeyPath: %s", helpers.RFgB(">"), k.Struct().PrivateKeyPath)
+	l.Infof("	%s publicKeyPath:  %s", helpers.RFgB(">"), k.Struct().PublicKeyPath)
 }

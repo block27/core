@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amanelis/bespin/helpers"
+	h "github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/services/keys/ecdsa"
 )
 
@@ -76,7 +76,7 @@ var keysCmd = &cobra.Command{
 	Use: "keys",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf(fmt.Sprintf("%s", helpers.RedFgB("requires an argument")))
+			return fmt.Errorf(fmt.Sprintf("%s", h.RFgB("requires an argument")))
 		}
 
 		return nil
@@ -88,7 +88,7 @@ var keysCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new key pair",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[CREATE]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[CREATE]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, e := ecdsa.NewECDSA(*B.C, createName, createCurve)
@@ -104,7 +104,7 @@ var keysGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get key by identifier",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[GET]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[GET]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
@@ -120,7 +120,7 @@ var keysListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all keys",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[LIST]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[LIST]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
 		keys, err := ecdsa.ListECDSA(*B.C)
@@ -140,7 +140,7 @@ var keysSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with Key",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[SIGN]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[SIGN]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := ecdsa.GetECDSA(*B.C, signIdentifier)
@@ -150,7 +150,7 @@ var keysSignCmd = &cobra.Command{
 
 		// Read the file ready be signed / this should probably be hashed
 		// if size > key bit size anyways.
-		file, derr := helpers.NewFile(signFilePath)
+		file, derr := h.NewFile(signFilePath)
 		if derr != nil {
 			panic(derr)
 		}
@@ -170,26 +170,26 @@ var keysSignCmd = &cobra.Command{
 		// Now write a signarture.der file to hold the signature
 		derF := fmt.Sprintf("/var/data/keys/%s/signature-%d.der", key.FilePointer(),
 			int32(time.Now().Unix()))
-		if _, err := helpers.WriteBinary(derF, derD); err != nil {
+		if _, err := h.WriteBinary(derF, derD); err != nil {
 			panic(err)
 		}
 
-		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
-			helpers.RedFgB(signFilePath), helpers.WhiteFgB(") = "),
-			helpers.GreenFgB(file.GetMD5()))
+		B.L.Printf("%s%s%s%s", h.WFgB("=== MD5("),
+			h.RFgB(signFilePath), h.WFgB(") = "),
+			h.GFgB(file.GetMD5()))
 
-		B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
-			helpers.RedFgB(signFilePath), helpers.WhiteFgB(") = "),
-			helpers.GreenFgB(file.GetSHA()))
+		B.L.Printf("%s%s%s%s", h.WFgB("=== SHA("),
+			h.RFgB(signFilePath), h.WFgB(") = "),
+			h.GFgB(file.GetSHA()))
 
 		B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-			helpers.WhiteFgB("=== Signature("),
-			helpers.RedFgB(derF),
-			helpers.WhiteFgB(")"),
+			h.WFgB("=== Signature("),
+			h.RFgB(derF),
+			h.WFgB(")"),
 			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 
-		// B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
-		// 	helpers.GreenFgB(key.Verify(file.GetBody(), sig)))
+		// B.L.Printf("%s%s", h.WhiteFgB("=== Verified: "),
+		// 	h.GreenFgB(key.Verify(file.GetBody(), sig)))
 	},
 }
 
@@ -197,7 +197,7 @@ var keysVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[VERIFY]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[VERIFY]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := ecdsa.GetECDSA(*B.C, verifyIdentifier)
@@ -207,7 +207,7 @@ var keysVerifyCmd = &cobra.Command{
 
 		// Read the file ready be signed / this should probably be hashed
 		// if size > key bit size anyways.
-		file, derr := helpers.NewFile(verifyFilePath)
+		file, derr := h.NewFile(verifyFilePath)
 		if derr != nil {
 			panic(derr)
 		}
@@ -218,22 +218,22 @@ var keysVerifyCmd = &cobra.Command{
 			panic(derr)
 		}
 
-		// B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== MD5("),
-		// 	helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
-		// 	helpers.GreenFgB(file.GetMD5()))
+		// B.L.Printf("%s%s%s%s", h.WhiteFgB("=== MD5("),
+		// 	h.RedFgB(verifyFilePath), h.WhiteFgB(") = "),
+		// 	h.GreenFgB(file.GetMD5()))
 		//
-		// B.L.Printf("%s%s%s%s", helpers.WhiteFgB("=== SHA("),
-		// 	helpers.RedFgB(verifyFilePath), helpers.WhiteFgB(") = "),
-		// 	helpers.GreenFgB(file.GetSHA()))
+		// B.L.Printf("%s%s%s%s", h.WhiteFgB("=== SHA("),
+		// 	h.RedFgB(verifyFilePath), h.WhiteFgB(") = "),
+		// 	h.GreenFgB(file.GetSHA()))
 		//
 		// B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
-		// 	helpers.WhiteFgB("=== Signature("),
-		// 	helpers.RedFgB(verifySignaturePath),
-		// 	helpers.WhiteFgB(")"),
+		// 	h.WhiteFgB("=== Signature("),
+		// 	h.RedFgB(verifySignaturePath),
+		// 	h.WhiteFgB(")"),
 		// 	len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
 
-		B.L.Printf("%s%s", helpers.WhiteFgB("=== Verified: "),
-			helpers.GreenFgB(key.Verify([]byte(file.GetSHA()), sig)))
+		B.L.Printf("%s%s", h.WFgB("=== Verified: "),
+			h.GFgB(key.Verify([]byte(file.GetSHA()), sig)))
 	},
 }
 
@@ -241,10 +241,10 @@ var keysImportPubCmd = &cobra.Command{
 	Use:   "importPub",
 	Short: "Import a public key",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", helpers.CyanFgB("=== Keys[IMPORT:PUB]"))
+    B.L.Printf("%s", h.CFgB("=== Keys[IMPORT:PUB]"))
   },
 	Run: func(cmd *cobra.Command, args []string) {
-		pub, err := helpers.NewFile(importPubFile)
+		pub, err := h.NewFile(importPubFile)
 		if err !=nil {
 			panic(err)
 		}

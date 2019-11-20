@@ -113,7 +113,7 @@ func (b *Backend) HardwareAuthenticate() error {
 			for i := 0; i < len(spinners); i++ {
 				spinners[i].Stop()
 			}
-			return fmt.Errorf("%s%s%s", h.RedFgB("missing ["), h.RedFgB(v), h.RedFgB("] mount"))
+			return fmt.Errorf("%s%s%s", h.RFgB("missing ["), h.RFgB(v), h.RFgB("] mount"))
 		}
 	}
 
@@ -133,21 +133,21 @@ func (b *Backend) HardwareAuthenticate() error {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
 		}
-		return fmt.Errorf("%s", h.RedFgB("key does not match Hardware(key)"))
+		return fmt.Errorf("%s", h.RFgB("key does not match Hardware(key)"))
 	}
 
 	if string(aes.Iv()) != hmI {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
 		}
-		return fmt.Errorf("%s", h.RedFgB("iv does not match Hardware(iv)"))
+		return fmt.Errorf("%s", h.RFgB("iv does not match Hardware(iv)"))
 	}
 
 	for i := 0; i < len(spinners); i++ {
 		spinners[i].Stop()
 	}
-	fmt.Printf("hw ky(%d) verified, %s\n", len(string(aes.Key())), h.GreenFgB("OK"))
-	fmt.Printf("hw iv(%d) verified, %s\n", len(string(aes.Iv())), h.GreenFgB("OK"))
+	fmt.Printf("hw ky(%d) verified, %s\n", len(string(aes.Key())), h.GFgB("OK"))
+	fmt.Printf("hw iv(%d) verified, %s\n", len(string(aes.Iv())), h.GFgB("OK"))
 
 	// Create a cypter service object - encryption/decryption
 	c, _ := crypto.NewCrypter(
@@ -161,7 +161,7 @@ func (b *Backend) HardwareAuthenticate() error {
 
 	dec1, _ := c.Decrypt([]byte(b1F))
 	if string(dec1) != p1F {
-		return fmt.Errorf("%s", h.RedFgB("pin1 does not match, invalid ext authentication"))
+		return fmt.Errorf("%s", h.RFgB("pin1 does not match, invalid ext authentication"))
 	}
 
 	// Read ext2
@@ -170,7 +170,7 @@ func (b *Backend) HardwareAuthenticate() error {
 
 	dec2, _ := c.Decrypt([]byte(b2F))
 	if string(dec2) != p2F {
-		return fmt.Errorf("%s", h.RedFgB("pin2 does not match, invalid ext authentication"))
+		return fmt.Errorf("%s", h.RFgB("pin2 does not match, invalid ext authentication"))
 	}
 
 	return nil
@@ -216,7 +216,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 
 	if !h.FileExists(dev) {
 		return nil, fmt.Errorf("%s",
-			h.RedFgB("missing hardware AES device, cannot continue"))
+			h.RFgB("missing hardware AES device, cannot continue"))
 	}
 
 	c := serial.NewSerial(dev, 115200)
@@ -257,19 +257,19 @@ func (b *Backend) Welcome() {
 	}
 
 	fmt.Printf("%s\n",
-		h.CyanFgB("----------------------------------------------------------------"))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Arch"), h.WhiteFgB(runtime.GOARCH))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- AES DEV"), h.WhiteFgB(dev))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Compiler"), h.WhiteFgB(runtime.Compiler))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- CPUS"), h.WhiteFgB(runtime.NumCPU()))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Crypto"), h.WhiteFgB(crypto.Devices[runtime.GOOS]))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Runtime"), h.WhiteFgB(runtime.GOOS))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- Mode"), h.WhiteFgB("dev"))
+		h.CFgB("----------------------------------------------------------------"))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- Arch"), h.WFgB(runtime.GOARCH))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- AES DEV"), h.WFgB(dev))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- Compiler"), h.WFgB(runtime.Compiler))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- CPUS"), h.WFgB(runtime.NumCPU()))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- Crypto"), h.WFgB(crypto.Devices[runtime.GOOS]))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- Runtime"), h.WFgB(runtime.GOOS))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- Mode"), h.WFgB("dev"))
 
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- EntropyA"), h.WhiteFgB(0))
-	fmt.Printf("%s: \t%s\n", h.GreenFgB("- EntropyP"), h.WhiteFgB(0))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- EntropyA"), h.WFgB(0))
+	fmt.Printf("%s: \t%s\n", h.GFgB("- EntropyP"), h.WFgB(0))
 	fmt.Printf("%s\n",
-		h.CyanFgB("----------------------------------------------------------------"))
+		h.CFgB("----------------------------------------------------------------"))
 }
 
 func newSpinner(num int) ([]*spinner.Spinner, error) {

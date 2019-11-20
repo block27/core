@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/amanelis/bespin/backend"
-	"github.com/amanelis/bespin/helpers"
+	h "github.com/amanelis/bespin/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "sigma",
-		Short: fmt.Sprintf("%s: ECDSA/RSA key generation, signing, AES encrypt/decrypt, and secure backup", helpers.GreenFgB("Sigma CLI")),
+		Short: fmt.Sprintf("%s: ECDSA/RSA key generation, signing, AES encrypt/decrypt, and secure backup", h.GFgB("Sigma CLI")),
 		Run: func(cmd *cobra.Command, args []string) {
 			B.Welcome()
 		},
