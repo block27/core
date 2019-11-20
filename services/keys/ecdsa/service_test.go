@@ -17,6 +17,12 @@ import (
 )
 
 var Config config.ConfigReader
+var Curves = []string{
+	"secp224r1",
+	"prime256v1",
+	"secp384r1",
+	"secp521r1",
+}
 
 var PrivateKey *ecdsa.PrivateKey
 var PublicKey *ecdsa.PublicKey
@@ -65,7 +71,7 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA("some-name", "prime256v1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "some-name", "prime256v1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
@@ -87,7 +93,7 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA("some-name", "secp384r1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "some-name", "secp384r1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
@@ -110,31 +116,31 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 	}
 
 	// Empty "name"
-	_, e := ImportPublicECDSA("", "secp521r1", pub.GetBody())
+	_, e := ImportPublicECDSA(Config, "", "secp521r1", pub.GetBody())
 	if e == nil {
 		t.Fatal(e)
 	}
 
 	// Empty "curve"
-	_, r := ImportPublicECDSA("some-name", "", pub.GetBody())
+	_, r := ImportPublicECDSA(Config, "some-name", "", pub.GetBody())
 	if r == nil {
 		t.Fatal(r)
 	}
 
 	// Invalid curve
-	_, p := ImportPublicECDSA("some-name", "junk1024r1", pub.GetBody())
+	_, p := ImportPublicECDSA(Config, "some-name", "junk1024r1", pub.GetBody())
 	if p == nil {
 		t.Fatal(p)
 	}
 
 	// Invalid pub
-	_, j := ImportPublicECDSA("some-name", "secp521r1", []byte("junk..."))
+	_, j := ImportPublicECDSA(Config, "some-name", "secp521r1", []byte("junk..."))
 	if j == nil {
 		t.Fatal(j)
 	}
 
 	// Valid key
-	k1, e := ImportPublicECDSA("some-name", "secp521r1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "some-name", "secp521r1", pub.GetBody())
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -368,22 +374,35 @@ func TestGetECDSA(t *testing.T) {
 func TestListECDSA(t *testing.T) {
 	_, err := NewECDSA(Config, "context-key", "prime256v1")
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 
 	result, err := ListECDSA(Config)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 
 	if len(result) == 0 {
-		t.Fail()
+		t.Fatal("0 keys returned, should be < 1")
 	}
 }
 
 func TestGenerateUUID(t *testing.T) {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
 	if !r.MatchString(generateUUID().String()) {
+		t.Fail()
+	}
+}
+
+func TestGetCurve(t *testing.T) {
+	for _, curve := range Curves {
+		if _, c, e := getCurve(curve); e !=nil || c != curve  {
+			t.Fatalf("failed to getCurve on %s", curve)
+		}
+	}
+
+	// invalid
+	if _, _, e := getCurve("junk"); e ==nil  {
 		t.Fail()
 	}
 }

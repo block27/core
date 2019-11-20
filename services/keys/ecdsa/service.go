@@ -101,7 +101,7 @@ func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
 // ImportPublicECDSA - import an existing ECDSA key into a KeyAPI object for
 // use in the Service API. Since you are importing a public Key, this will be
 // an incomplete Key object.
-func ImportPublicECDSA(name string, curve string, public []byte) (KeyAPI, error) {
+func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public []byte) (KeyAPI, error) {
 	if name == "" {
 		return nil, fmt.Errorf("name cannot be empty")
 	}
@@ -134,6 +134,9 @@ func ImportPublicECDSA(name string, curve string, public []byte) (KeyAPI, error)
 		FingerprintSHA: encodings.FingerprintSHA256(pub),
 		CreatedAt:      time.Now(),
 	}
+
+	// Write the entire key object to FS
+	key.writeToFS(c, nil, pub)
 
 	return key, nil
 }
@@ -172,84 +175,89 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 		CreatedAt:      time.Now(),
 	}
 
-	// Create file paths which include the public keys curve as signature
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), key.FilePointer())
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		os.Mkdir(dirPath, os.ModePerm)
-	}
-
-	key.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
-	key.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
-	key.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
-
-	// save private and public key separately
-	privatekeyFile, err := os.Create(key.PrivateKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	privatekeyencoder := gob.NewEncoder(privatekeyFile)
-	privatekeyencoder.Encode(pri)
-	privatekeyFile.Close()
-
-	publickeyFile, err := os.Create(key.PublicKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	publickeyencoder := gob.NewEncoder(publickeyFile)
-	publickeyencoder.Encode(pub)
-	publickeyFile.Close()
-
-	// Pem for private key
-	pemfile, err := os.Create(key.PrivatePemPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Marshall the private key to PKCS8
-	pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
-	if pemErr != nil {
-		return nil, pemErr
-	}
-
-	// Create pem file
-	if  e := pem.Encode(pemfile, &pem.Block{
-		Type:  encodings.ECPrivateKey,
-		Bytes: pem509,
-	}); e != nil {
-		return nil, e
-	}
-
-	// Write data to file
-	binFile := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
-	objFile, err := os.Create(binFile)
-	if err != nil {
-		return nil, err
-	}
-	defer objFile.Close()
-
-	// Marshall the objects
-	obj, err := keyToGOB64(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
-		return nil, err
-	}
+	// Write the entire key object to FS
+	key.writeToFS(c, pri, pub)
 
 	return key, nil
 }
 
 
 // writeToFS
-func (k *key) writeToFS() error {
+func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
+	// Create file paths which include the public keys curve as signature
+	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, os.ModePerm)
+	}
+
+	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
+	k.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
+	k.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
+
+	// Public Key ----------------------------------------------------------------
+	if pub !=  nil {
+		publickeyFile, err := os.Create(k.PublicKeyPath)
+		if err != nil {
+			return err
+		}
+
+		publickeyencoder := gob.NewEncoder(publickeyFile)
+		publickeyencoder.Encode(pub)
+		publickeyFile.Close()
+	}
+
+	// Private Key ---------------------------------------------------------------
+	if pri != nil {
+		privatekeyFile, err := os.Create(k.PrivateKeyPath)
+		if err != nil {
+			return err
+		}
+
+		privatekeyencoder := gob.NewEncoder(privatekeyFile)
+		privatekeyencoder.Encode(pri)
+		privatekeyFile.Close()
+
+		// Private Pem ---------------------------------------------------------------
+		pemfile, err := os.Create(k.PrivatePemPath)
+		if err != nil {
+			return err
+		}
+
+		// Marshall the private key to PKCS8
+		pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
+		if pemErr != nil {
+			return pemErr
+		}
+
+		// Create pem file
+		if  e := pem.Encode(pemfile, &pem.Block{
+			Type:  encodings.ECPrivateKey,
+			Bytes: pem509,
+		}); e != nil {
+			return e
+		}
+	}
+
+	// OBJ marshalling -----------------------------------------------------------
+	binFile := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
+	objFile, err := os.Create(binFile)
+	if err != nil {
+		return err
+	}
+	defer objFile.Close()
+
+	// Marshall the objects
+	obj, err := keyToGOB64(k)
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
+		return err
+	}
 
 	return  nil
 }
-
-
 
 // GetECDSA - fetch a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures

@@ -249,7 +249,7 @@ var keysImportPubCmd = &cobra.Command{
 			panic(err)
 		}
 
-		key, err := ecdsa.ImportPublicECDSA(importPubName, importPubCurve, pub.GetBody())
+		key, err := ecdsa.ImportPublicECDSA(*B.C, importPubName, importPubCurve, pub.GetBody())
 		if err != nil {
 			panic(err)
 		}
