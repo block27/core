@@ -10,12 +10,132 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sync"
+	"time"
 
+	guuid "github.com/google/uuid"
 	"github.com/agl/ed25519/extra25519"
-	"github.com/amanelis/bespin/services/keys/lib/ecdh"
-	"github.com/amanelis/bespin/utils"
 	"golang.org/x/crypto/ed25519"
+
+	api "github.com/amanelis/bespin/services/keys/api"
+	"github.com/amanelis/bespin/config"
+	"github.com/amanelis/bespin/crypto"
+	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/services/keys/eddsa/ecdh"
+	"github.com/amanelis/bespin/utils"
 )
+
+// KeyAPI - main api for defining Key behavior and functions
+type KeyAPI interface {
+	Struct() *key
+}
+
+// key - struct, main type and placeholder for private keys on the system. These
+// should be persisted to a flat file database storage.
+type key struct {
+	sink sync.Mutex // mutex to allow clean concurrent access
+	GID  guuid.UUID // guuid for crypto identification
+
+	// Base name passed from CLI, *not indexed
+	Name string
+
+	// Slug auto generated from Haiku *not indexed
+	Slug string
+
+	// Hold the base key status, {archive, active}
+	Status string
+
+	// Basically the elliptic curve size of the key
+	KeyType string
+
+	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
+	FingerprintSHA string // Real fingerprint in  SHA256  of the key
+
+	PrivatePemPath string // Pem PKS8 format of the private key
+	PrivateKeyPath string // ECDSA path for private key
+	PublicKeyPath  string // ECDSA path for public key
+
+	PrivateKeyB64 string // B64 of private key
+	PublicKeyB64  string // B64 of public key
+
+	CreatedAt time.Time
+
+	// Used as place holder converstions during Sign/Verify
+	// these should probably be set to nil after use as it's
+	// easy access to  the real  objects,  hence why they   aren't
+	// publically accessible.  taste it.
+	privateKey *ed25519.PrivateKey
+	publicKey  *ed25519.PublicKey
+}
+
+// NewED25519Blank - create a struct from a database object marshalled into obj
+//
+func NewED25519Blank(c config.ConfigReader) (KeyAPI, error) {
+	return &key{}, nil
+}
+
+// NewEDDSA - main factory method for creating the ECDSA key.  Quite complicated
+// but what happens here is complete key generation using our cyrpto/rand lib
+//
+func NewEDDSA(c config.ConfigReader, name string) (KeyAPI, error) {
+	pub, pri, err := ed25519.GenerateKey(crypto.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the key struct object
+	key := &key{
+		GID:            api.GenerateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeyType:        "eddsa.PrivateKey <==> ed25519",
+		Status:         api.StatusActive,
+		PublicKeyB64:   base64.StdEncoding.EncodeToString(pub),
+		PrivateKeyB64:  base64.StdEncoding.EncodeToString(pri),
+		FingerprintMD5: string(crypto.DigestMD5Sum(pub)),
+		FingerprintSHA: string(crypto.DigestSHA256Sum(pub)),
+		CreatedAt:      time.Now(),
+	}
+
+	// // Write the entire key object to FS
+	// key.writeToFS(c, pri, pub)
+
+	return key, nil
+}
+
+// Struct - return the full object for access to non exported fields, not sure
+// about this, but fine for now... think of a better way to implement such need,
+// perhaps just using attribute getters will suffice...
+func (k *key) Struct() *key {
+	return k
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const (
 	// PublicKeySize is the size of a serialized PublicKey in bytes (32 bytes).
@@ -35,6 +155,7 @@ var errInvalidKey = errors.New("eddsa: invalid key")
 // PublicKey is a EdDSA public key.
 type PublicKey struct {
 	pubKey    ed25519.PublicKey
+	priKey 		ed25519.PrivateKey
 	b64String string
 }
 

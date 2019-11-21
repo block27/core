@@ -1,4 +1,4 @@
-package keys
+package crypto
 
 import (
 	"crypto/sha256"
@@ -69,7 +69,7 @@ func BenchmarkBcrypt(b *testing.B) {
 
 func ExampleHash() {
 	tag := "hashing file for lookup key"
-	contents, err := ioutil.ReadFile("../../../data/random")
+	contents, err := ioutil.ReadFile("../data/random")
 	if err != nil {
 		fmt.Printf("could not read file: %v\n", err)
 		os.Exit(1)

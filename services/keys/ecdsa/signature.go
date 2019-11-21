@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	"github.com/amanelis/bespin/helpers"
+	h "github.com/amanelis/bespin/helpers"
 )
 
 // Signature - this struct is unique and must not be modified. ASN1 package
@@ -19,7 +19,7 @@ type Signature struct {
 // LoadSignature ...
 func LoadSignature(file string) (*Signature, error) {
 	// Read in the binary signature file containing {DER,R,S}
-	binF, err := helpers.NewFile(file)
+	binF, err := h.NewFile(file)
 	if err != nil {
 		return (*Signature)(nil), err
 	}

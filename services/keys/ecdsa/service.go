@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	// "crypto/md5"
-	// "crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/gob"
@@ -18,11 +16,11 @@ import (
 	"sync"
 	"time"
 
+	api "github.com/amanelis/bespin/services/keys/api"
+	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
-	"github.com/amanelis/bespin/services/keys/ecdsa/encodings"
-	keys "github.com/amanelis/bespin/services/keys/lib"
 
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
@@ -30,12 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	statusActive   = "active"
-	statusArchived = "archive"
-)
-
-// KeyAPI - main api for defining Key behavior and functions
+// KeyAPI main api for defining Key behavior and functions
 type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
@@ -51,7 +44,7 @@ type KeyAPI interface {
 	Verify([]byte, *Signature) bool
 }
 
-// key - struct, main type and placeholder for private keys on the system. These
+// key struct, main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
@@ -78,9 +71,6 @@ type key struct {
 
 	PrivateKeyB64 string // B64 of private key
 	PublicKeyB64  string // B64 of public key
-
-	PrivateKeyHEX string
-	PublicKeyHEX  string
 
 	CreatedAt time.Time
 
@@ -115,23 +105,23 @@ func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public 
 		return nil,  err
 	}
 
-	pub, err := keys.DecodePublicKey(public)
+	pub, err := DecodePublicKey(public)
 	if err != nil {
 		return nil, err
 	}
 
-	_, pem := encodings.Encode(nil, pub)
+	_, pem := enc.Encode(nil, pub)
 
 	// Resulting key will not be complete - create the key struct object anyways
 	key := &key{
-		GID:            generateUUID(),
+		GID:            api.GenerateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
 		KeyType:        fmt.Sprintf("ecdsa.PublicKey <==> %s", ty),
-		Status:         statusActive,
+		Status:         api.StatusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
-		FingerprintMD5: encodings.FingerprintMD5(pub),
-		FingerprintSHA: encodings.FingerprintSHA256(pub),
+		FingerprintMD5: enc.FingerprintMD5(pub),
+		FingerprintSHA: enc.FingerprintSHA256(pub),
 		CreatedAt:      time.Now(),
 	}
 
@@ -159,19 +149,19 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
-	pemKey, pemPub := encodings.Encode(pri, pub)
+	pemKey, pemPub := enc.Encode(pri, pub)
 
 	// Create the key struct object
 	key := &key{
-		GID:            generateUUID(),
+		GID:            api.GenerateUUID(),
 		Name:           name,
 		Slug:           helpers.NewHaikunator().Haikunate(),
 		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
-		Status:         statusActive,
+		Status:         api.StatusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
 		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
-		FingerprintMD5: encodings.FingerprintMD5(pub),
-		FingerprintSHA: encodings.FingerprintSHA256(pub),
+		FingerprintMD5: enc.FingerprintMD5(pub),
+		FingerprintSHA: enc.FingerprintSHA256(pub),
 		CreatedAt:      time.Now(),
 	}
 
@@ -180,7 +170,6 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 
 	return key, nil
 }
-
 
 // writeToFS
 func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
@@ -231,7 +220,7 @@ func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa
 
 		// Create pem file
 		if  e := pem.Encode(pemfile, &pem.Block{
-			Type:  encodings.ECPrivateKey,
+			Type:  enc.ECPrivateKey,
 			Bytes: pem509,
 		}); e != nil {
 			return e
@@ -252,11 +241,7 @@ func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa
 		return err
 	}
 
-	if err := ioutil.WriteFile(binFile, []byte(obj), 0777); err != nil {
-		return err
-	}
-
-	return  nil
+	return ioutil.WriteFile(binFile, []byte(obj), 0777)
 }
 
 // GetECDSA - fetch a system key that lives on the file system. Return useful
@@ -388,11 +373,6 @@ func getCurve(curve string) (elliptic.Curve, string, error) {
 	default:
 		return nil, "", fmt.Errorf("%s", helpers.RFgB("incorrect curve size passed"))
 	}
-}
-
-// generateUUID - generate and return a valid GUUID
-func generateUUID() guuid.UUID {
-	return guuid.New()
 }
 
 // getArtSignature ...
