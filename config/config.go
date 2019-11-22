@@ -44,8 +44,8 @@ var (
 	ExtBase2Path string
 )
 
-// ConfigReader represents configuration reader
-type ConfigReader interface {
+// Reader represents configuration reader
+type Reader interface {
 	Get(string) interface{}
 	GetString(string) string
 	GetInt(string) int
@@ -58,15 +58,15 @@ type ConfigReader interface {
 }
 
 // DefaultSettings is the function for configuring defaults
-type DefaultSettings func(config ConfigReader)
+type DefaultSettings func(config Reader)
 
-// ConfigDefaults - returns the defauls of the config passed
-func ConfigDefaults(config ConfigReader) {
+// Defaults - returns the defauls of the config passed
+func Defaults(config Reader) {
 	defaults(config)
 }
 
 // Defaults is the default settings functor
-func defaults(config ConfigReader) {
+func defaults(config Reader) {
 	config.SetDefault(environment, getEnv(environmentVar, development))
 	config.SetDefault(serialNumber, getEnv(serialNumberVar, "0x0000000001"))
 
@@ -113,7 +113,7 @@ func getTimeStamp() string {
 }
 
 // LoadConfig - returns configuration for a particular app
-func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
+func LoadConfig(defaultSetup DefaultSettings) (Reader, error) {
 	config := viper.New()
 
 	// Set base ENV defaults
@@ -150,7 +150,7 @@ func LoadConfig(defaultSetup DefaultSettings) (ConfigReader, error) {
 }
 
 // LoadLogger - set the defaults for the logging class
-func LoadLogger(config ConfigReader) *logrus.Logger {
+func LoadLogger(config Reader) *logrus.Logger {
 	log := logrus.New()
 
 	log.Formatter = new(prefixed.TextFormatter)

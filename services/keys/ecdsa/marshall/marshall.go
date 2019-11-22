@@ -1,4 +1,4 @@
-package ecdsa
+package marshall
 
 import (
 	"crypto/ecdsa"
@@ -87,12 +87,14 @@ func EncodePrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
 	return pem.EncodeToMemory(keyBlock), nil
 }
 
+// EncodeSignatureJWT ...
 // Encodes an ECDSA signature according to
 // https://tools.ietf.org/html/rfc7515#appendix-A.3.1
 func EncodeSignatureJWT(sig []byte) string {
 	return base64.RawURLEncoding.EncodeToString(sig)
 }
 
+// DecodeSignatureJWT ...
 // Decodes an ECDSA signature according to
 // https://tools.ietf.org/html/rfc7515#appendix-A.3.1
 func DecodeSignatureJWT(b64sig string) ([]byte, error) {

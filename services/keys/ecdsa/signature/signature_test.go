@@ -1,4 +1,4 @@
-package ecdsa
+package signature
 
 import (
 	"encoding/hex"

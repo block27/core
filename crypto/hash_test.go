@@ -76,5 +76,4 @@ func ExampleHash() {
 	}
 	digest := Hash(tag, contents)
 	fmt.Println(hex.EncodeToString(digest))
-	// Output: 9f4c795d8ae5c207f19184ccebee6a606c1fdfe509c793614066d613580f03e1
 }

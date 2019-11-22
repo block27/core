@@ -1,8 +1,11 @@
 package eddsa
 
 import (
+	"bytes"
 	"crypto/subtle"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -18,6 +21,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	api "github.com/amanelis/bespin/services/keys/api"
+	enc "github.com/amanelis/bespin/services/keys/eddsa/encodings"
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
@@ -27,7 +31,11 @@ import (
 
 // KeyAPI - main api for defining Key behavior and functions
 type KeyAPI interface {
+	FilePointer() string
 	Struct() *key
+
+	Marshall() (string, error)
+	Unmarshall(string) (KeyAPI, error)
 }
 
 // key - struct, main type and placeholder for private keys on the system. These
@@ -70,14 +78,14 @@ type key struct {
 
 // NewED25519Blank - create a struct from a database object marshalled into obj
 //
-func NewED25519Blank(c config.ConfigReader) (KeyAPI, error) {
+func NewED25519Blank(c config.Reader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
 // NewEDDSA - main factory method for creating the ECDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
-func NewEDDSA(c config.ConfigReader, name string) (KeyAPI, error) {
+func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 	pub, pri, err := ed25519.GenerateKey(crypto.Reader)
 	if err != nil {
 		return nil, err
@@ -98,9 +106,86 @@ func NewEDDSA(c config.ConfigReader, name string) (KeyAPI, error) {
 	}
 
 	// // Write the entire key object to FS
-	// key.writeToFS(c, pri, pub)
+	key.writeToFS(c, &pri, &pub)
 
 	return key, nil
+}
+
+// writeToFS
+func (k *key) writeToFS(c config.Reader, pri *ed25519.PrivateKey, pub *ed25519.PublicKey) error {
+	// Create the keys root directory based on it's FilePointer method
+	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, os.ModePerm)
+	}
+
+	k.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
+	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
+	k.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
+
+	// OBJ marshalling -----------------------------------------------------------
+	objPath := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
+	objFile, err := os.Create(objPath)
+	if err != nil {
+		return err
+	}
+	defer objFile.Close()
+
+	// Marshall the objects
+	obj, err := keyToGOB64(k)
+	if err != nil {
+		return err
+	}
+
+	if _, err := helpers.WriteBinary(objPath, []byte(obj)); err != nil {
+		return err
+	}
+
+	// Public Key ----------------------------------------------------------------
+	if pub !=  nil {
+		publickeyFile, err := os.Create(k.PublicKeyPath)
+		if err != nil {
+			return err
+		}
+
+		publickeyencoder := gob.NewEncoder(publickeyFile)
+		publickeyencoder.Encode(pub)
+		publickeyFile.Close()
+	}
+
+	// Private Key ---------------------------------------------------------------
+	if pri != nil {
+		privatekeyFile, err := os.Create(k.PrivateKeyPath)
+		if err != nil {
+			return err
+		}
+
+		privatekeyencoder := gob.NewEncoder(privatekeyFile)
+		privatekeyencoder.Encode(pri)
+		privatekeyFile.Close()
+
+		// Private Pem -------------------------------------------------------------
+		pemfile, err := os.Create(k.PrivatePemPath)
+		if err != nil {
+			return err
+		}
+
+		// Marshall the private key to PKCS8
+		pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
+		if pemErr != nil {
+			return pemErr
+		}
+
+		// Create pem file
+		if  e := pem.Encode(pemfile, &pem.Block{
+			Type:  enc.EDPrivateKey,
+			Bytes: pem509,
+		}); e != nil {
+			return e
+		}
+	}
+
+	return nil
 }
 
 // Struct - return the full object for access to non exported fields, not sure
@@ -110,7 +195,56 @@ func (k *key) Struct() *key {
 	return k
 }
 
+// FilePointer - return a string that will represent the path the key can be
+// written to on the file system
+//
+func (k *key) FilePointer() string {
+	return k.GID.String()
+}
 
+// Marshall ...
+func (k *key) Marshall() (string, error)  {
+	return "", nil
+}
+
+// Unmarshall ...
+func (k *key) Unmarshall(string) (KeyAPI, error)  {
+	return nil, nil
+}
+
+// keyToGOB64 - take a pointer to an existing key and return it's entire body
+// object base64 encoded for storage.
+func keyToGOB64(k *key) (string, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+
+	if err := e.Encode(k); err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
+}
+
+// keyFromGOB64 - take a base64 encoded string and convert that to an object. We
+// need a way to handle updates here.
+func keyFromGOB64(str string) (*key, error) {
+	by, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return (*key)(nil), err
+	}
+
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+
+	var k *key
+
+	if err = d.Decode(&k); err != nil {
+		fmt.Println("failed gob Decode", err)
+	}
+
+	return k, nil
+}
 
 
 
@@ -157,6 +291,12 @@ type PublicKey struct {
 	pubKey    ed25519.PublicKey
 	priKey 		ed25519.PrivateKey
 	b64String string
+}
+
+// PrivateKey is a EdDSA private key.
+type PrivateKey struct {
+	pubKey  PublicKey
+	privKey ed25519.PrivateKey
 }
 
 // InternalPtr returns a pointer to the internal (`golang.org/x/crypto/ed25519`)
@@ -283,12 +423,6 @@ func (k *PublicKey) rebuildB64String() {
 // Equal returns true iff the public key is byte for byte identical.
 func (k *PublicKey) Equal(cmp *PublicKey) bool {
 	return subtle.ConstantTimeCompare(k.pubKey[:], cmp.pubKey[:]) == 1
-}
-
-// PrivateKey is a EdDSA private key.
-type PrivateKey struct {
-	pubKey  PublicKey
-	privKey ed25519.PrivateKey
 }
 
 // InternalPtr returns a pointer to the internal (`golang.org/x/crypto/ed25519`)

@@ -8,6 +8,7 @@ import (
 
 	h "github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/services/keys/ecdsa"
+	"github.com/amanelis/bespin/services/keys/ecdsa/signature"
 )
 
 var (
@@ -213,7 +214,7 @@ var keysVerifyCmd = &cobra.Command{
 		}
 
 		// Read the signature file and convert to an ecdsaSigner
-		sig, derr := ecdsa.LoadSignature(verifySignaturePath)
+		sig, derr := signature.LoadSignature(verifySignaturePath)
 		if derr != nil {
 			panic(derr)
 		}

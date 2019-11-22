@@ -2,12 +2,86 @@ package eddsa
 
 import (
 	"crypto/rand"
+	"fmt"
+	"os"
 	"testing"
+
+	"github.com/amanelis/bespin/config"
 
 	"github.com/amanelis/bespin/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var Config config.Reader
+
+var Key *key
+
+func init() {
+	os.Setenv("ENVIRONMENT", "test")
+
+	c, err := config.LoadConfig(config.Defaults)
+	if err != nil {
+		panic(err)
+	}
+
+	if c.GetString("environment") != "test" {
+		panic(fmt.Errorf("test [environment] is not in [test] mode"))
+	}
+
+	k1, err := NewEDDSA(c, "test-key-0")
+	if err != nil {
+		panic(err)
+	}
+
+	Key = k1.Struct()
+	Config = c
+}
+
+func TestNewED25519Blank(t *testing.T) {
+	result, err := NewED25519Blank(Config)
+	if err != nil {
+		t.Fail()
+	}
+
+	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
+	assert.Equal(t, result.Struct().Name, "")
+	assert.Equal(t, result.Struct().Slug, "")
+	assert.Equal(t, result.Struct().Status, "")
+	assert.Equal(t, result.Struct().KeyType, "")
+	assert.Equal(t, result.Struct().FingerprintMD5, "")
+	assert.Equal(t, result.Struct().FingerprintSHA, "")
+
+	assert.Equal(t, result.Struct().PrivatePemPath, "")
+	assert.Equal(t, result.Struct().PrivateKeyB64, "")
+	assert.Equal(t, result.Struct().PublicKeyB64, "")
+	assert.Equal(t, result.Struct().PrivateKeyPath, "")
+	assert.Equal(t, result.Struct().PublicKeyPath, "")
+}
+
+func TestNewEDDSA(t *testing.T) {
+	// Valid
+	k, err := NewEDDSA(Config, "test-key-1")
+	if err != nil {
+		t.Fail()
+	}
+
+	assert.NotNil(t, k.Struct().GID)
+	assert.NotNil(t, k.Struct().Name)
+	assert.NotNil(t, k.Struct().Slug)
+	assert.NotNil(t, k.Struct().FingerprintMD5)
+	assert.NotNil(t, k.Struct().FingerprintSHA)
+
+	assert.NotNil(t, k.Struct().PrivatePemPath)
+	assert.NotNil(t, k.Struct().PrivateKeyB64)
+	assert.NotNil(t, k.Struct().PublicKeyB64)
+	assert.NotNil(t, k.Struct().PrivateKeyPath)
+	assert.NotNil(t, k.Struct().PublicKeyPath)
+
+	assert.Equal(t, k.Struct().Status, "active")
+	assert.Equal(t, k.Struct().KeyType, "eddsa.PrivateKey <==> ed25519")
+
+}
 
 func TestKeypair(t *testing.T) {
 	assert := assert.New(t)

@@ -17,7 +17,10 @@ import (
 	"time"
 
 	api "github.com/amanelis/bespin/services/keys/api"
+	eer "github.com/amanelis/bespin/services/keys/ecdsa/errors"
 	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
+	mar "github.com/amanelis/bespin/services/keys/ecdsa/marshall"
+	sig "github.com/amanelis/bespin/services/keys/ecdsa/signature"
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
@@ -40,12 +43,12 @@ type KeyAPI interface {
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
 
-	Sign([]byte) (*Signature, error)
-	Verify([]byte, *Signature) bool
+	Sign([]byte) (*sig.Signature, error)
+	Verify([]byte, *sig.Signature) bool
 }
 
-// key struct, main type and placeholder for private keys on the system. These
-// should be persisted to a flat file database storage.
+// key struct is the main type and placeholder for private keys on the system.
+// These should be persisted to a flat file database storage.
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
@@ -82,16 +85,15 @@ type key struct {
 	publicKey  *ecdsa.PublicKey
 }
 
-// NewECDSABlank - create a struct from a database object marshalled into obj
-//
-func NewECDSABlank(c config.ConfigReader) (KeyAPI, error) {
+// NewECDSABlank simply returns a blank object of KeyAPI/key struct
+func NewECDSABlank(c config.Reader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
-// ImportPublicECDSA - import an existing ECDSA key into a KeyAPI object for
+// ImportPublicECDSA imports an existing ECDSA key into a KeyAPI object for
 // use in the Service API. Since you are importing a public Key, this will be
 // an incomplete Key object.
-func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public []byte) (KeyAPI, error) {
+func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte) (KeyAPI, error) {
 	if name == "" {
 		return nil, fmt.Errorf("name cannot be empty")
 	}
@@ -105,12 +107,15 @@ func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public 
 		return nil,  err
 	}
 
-	pub, err := DecodePublicKey(public)
+	pub, err := mar.DecodePublicKey(public)
 	if err != nil {
 		return nil, err
 	}
 
-	_, pem := enc.Encode(nil, pub)
+	pem, perr := enc.EncodePublic(pub)
+	if perr != nil {
+		return  nil, perr
+	}
 
 	// Resulting key will not be complete - create the key struct object anyways
 	key := &key{
@@ -120,6 +125,7 @@ func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public 
 		KeyType:        fmt.Sprintf("ecdsa.PublicKey <==> %s", ty),
 		Status:         api.StatusActive,
 		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
+		PrivateKeyB64:  "",
 		FingerprintMD5: enc.FingerprintMD5(pub),
 		FingerprintSHA: enc.FingerprintSHA256(pub),
 		CreatedAt:      time.Now(),
@@ -131,10 +137,10 @@ func ImportPublicECDSA(c config.ConfigReader, name string, curve string, public 
 	return key, nil
 }
 
-// NewECDSA - main factory method for creating the ECDSA key.  Quite complicated
-// but what happens here is complete key generation using our cyrpto/rand lib
-//
-func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) {
+// NewECDSA is the main factory method for creating the ECDSA key. Quite
+// complicated but what happens here is complete key generation using our
+// cyrpto/rand lib
+func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	ec, ty, err := getCurve(curve)
 	if err != nil {
 		return nil,  err
@@ -149,7 +155,10 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding
-	pemKey, pemPub := enc.Encode(pri, pub)
+	pemKey, pemPub, perr := enc.Encode(pri, pub)
+	if perr != nil {
+		return  nil, perr
+	}
 
 	// Create the key struct object
 	key := &key{
@@ -172,16 +181,34 @@ func NewECDSA(c config.ConfigReader, name string, curve string) (KeyAPI, error) 
 }
 
 // writeToFS
-func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
-	// Create file paths which include the public keys curve as signature
+func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
+	// Create the keys root directory based on it's FilePointer method
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		os.Mkdir(dirPath, os.ModePerm)
 	}
 
-	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
 	k.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
+	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
 	k.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
+
+	// OBJ marshalling -----------------------------------------------------------
+	objPath := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
+	objFile, err := os.Create(objPath)
+	if err != nil {
+		return err
+	}
+	defer objFile.Close()
+
+	// Marshall the objects
+	obj, err := keyToGOB64(k)
+	if err != nil {
+		return err
+	}
+
+	if _, err := helpers.WriteBinary(objPath, []byte(obj)); err != nil {
+		return err
+	}
 
 	// Public Key ----------------------------------------------------------------
 	if pub !=  nil {
@@ -206,7 +233,7 @@ func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa
 		privatekeyencoder.Encode(pri)
 		privatekeyFile.Close()
 
-		// Private Pem ---------------------------------------------------------------
+		// Private Pem -------------------------------------------------------------
 		pemfile, err := os.Create(k.PrivatePemPath)
 		if err != nil {
 			return err
@@ -227,35 +254,20 @@ func (k *key) writeToFS(c config.ConfigReader, pri *ecdsa.PrivateKey, pub *ecdsa
 		}
 	}
 
-	// OBJ marshalling -----------------------------------------------------------
-	binFile := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
-	objFile, err := os.Create(binFile)
-	if err != nil {
-		return err
-	}
-	defer objFile.Close()
-
-	// Marshall the objects
-	obj, err := keyToGOB64(k)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(binFile, []byte(obj), 0777)
+	return nil
 }
 
-// GetECDSA - fetch a system key that lives on the file system. Return useful
+// GetECDSA fetches a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
-//
-func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
+func GetECDSA(c config.Reader, fp string) (KeyAPI, error) {
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return (*key)(nil), fmt.Errorf("%s", helpers.RFgB("invalid key path"))
+		return (*key)(nil), eer.NewKeyPathError("invalid key path")
 	}
 
 	data, err := helpers.ReadFile(fmt.Sprintf("%s/obj.bin", dirPath))
 	if err != nil {
-		return (*key)(nil), fmt.Errorf("%s", helpers.RFgB("invalid key object"))
+		return (*key)(nil), eer.NewKeyObjtError("invalid key objt")
 	}
 
 	obj, err := keyFromGOB64(data)
@@ -266,10 +278,9 @@ func GetECDSA(c config.ConfigReader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
-// ListECDSA - returns a list of active keys stored on the local filesystem. Of
+// ListECDSA returns a list of active keys stored on the local filesystem. Of
 // which are all encrypted via AES from the hardware block
-//
-func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
+func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
 	if err != nil {
 		return nil, err
@@ -279,6 +290,12 @@ func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 
 	for _, f := range files {
 		_key, _err := GetECDSA(c, f.Name())
+
+		// switch _err.(type) {
+		// case *eer.KeyObjt:
+		// 	continue;
+		// }
+
 		if _err != nil {
 			return nil, _err
 		}
@@ -289,9 +306,8 @@ func ListECDSA(c config.ConfigReader) ([]KeyAPI, error) {
 	return keys, nil
 }
 
-// FilePointer - return a string that will represent the path the key can be
+// FilePointer returns a string that will represent the path the key can be
 // written to on the file system
-//
 func (k *key) FilePointer() string {
 	return k.GID.String()
 }
@@ -317,30 +333,30 @@ func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	return d, nil
 }
 
-// Struct - return the full object for access to non exported fields, not sure
+// Struct returns the full object for access to non exported fields, not sure
 // about this, but fine for now... think of a better way to implement such need,
 // perhaps just using attribute getters will suffice...
 func (k *key) Struct() *key {
 	return k
 }
 
-// Sign - signs a hash (which should be the result of hashing a larger message)
+// Sign signs a hash (which should be the result of hashing a larger message)
 // using the private key, priv. If the hash is longer than the bit-length of the
 // private key's curve order, the hash will be truncated to that length.  It
 // returns the signature as a pair of integers{R,S}. The security of the private
 // key depends on the entropy of rand / which in this case we implement our own
-func (k *key) Sign(data []byte) (*Signature, error) {
+func (k *key) Sign(data []byte) (*sig.Signature, error) {
 	pri, err := k.getPrivateKey()
 	if err != nil {
-		return (*Signature)(nil), err
+		return (*sig.Signature)(nil), err
 	}
 
 	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
 	if err != nil {
-		return (*Signature)(nil), err
+		return (*sig.Signature)(nil), err
 	}
 
-	return &Signature{
+	return &sig.Signature{
 		// MD5: md5.Sum(data),
 		// SHA: sha256.Sum256(data),
 		R: r,
@@ -348,9 +364,9 @@ func (k *key) Sign(data []byte) (*Signature, error) {
 	}, nil
 }
 
-// Verify - verifies the signature in r, s of hash using the public key, pub. Its
+// Verify verifies the signature in r, s of hash using the public key, pub. Its
 // return value records whether the signature is valid.
-func (k *key) Verify(hash []byte, sig *Signature) bool {
+func (k *key) Verify(hash []byte, sig *sig.Signature) bool {
 	pub, err := k.getPublicKey()
 	if err != nil {
 		panic(err)
@@ -438,7 +454,7 @@ func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	return genericPublicKey.(*ecdsa.PublicKey), nil
 }
 
-// keyToGOB64 - take a pointer to an existing key and return it's entire body
+// keyToGOB64 takes a pointer to an existing key and return it's entire body
 // object base64 encoded for storage.
 func keyToGOB64(k *key) (string, error) {
 	b := bytes.Buffer{}
@@ -451,7 +467,7 @@ func keyToGOB64(k *key) (string, error) {
 	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
-// keyFromGOB64 - take a base64 encoded string and convert that to an object. We
+// keyFromGOB64 takes a base64 encoded string and convert that to an object. We
 // need a way to handle updates here.
 func keyFromGOB64(str string) (*key, error) {
 	by, err := base64.StdEncoding.DecodeString(str)
@@ -472,8 +488,8 @@ func keyFromGOB64(str string) (*key, error) {
 	return k, nil
 }
 
-// PrintKeysTW - an elaborate way to display key information... not needed, but
-// nice for demos and visually displays the key randomArt via a python script
+// PrintKeysTW prints an elaborate way to display key information... not needed,
+// but nice for demos and visually displays the key randomArt via a python script
 func PrintKeysTW(keys []KeyAPI) {
 	stylePairs := [][]table.Style{
 		{table.StyleColoredBright},
@@ -561,7 +577,7 @@ func PrintKeyTW(k *key) {
 	PrintKeysTW([]KeyAPI{k})
 }
 
-// PrintKey - helper function to print a key
+// PrintKey is a helper function to print a key
 func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("Key GID: %s", helpers.MFgD(k.FilePointer()))
 	l.Infof("Key MD5: %s", helpers.MFgD(k.Struct().FingerprintMD5))

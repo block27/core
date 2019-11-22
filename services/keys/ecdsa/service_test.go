@@ -1,7 +1,6 @@
 package ecdsa
 
 import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"fmt"
@@ -16,7 +15,7 @@ import (
 	"github.com/amanelis/bespin/helpers"
 )
 
-var Config config.ConfigReader
+var Config config.Reader
 var Curves = []string{
 	"secp224r1",
 	"prime256v1",
@@ -24,15 +23,12 @@ var Curves = []string{
 	"secp521r1",
 }
 
-var PrivateKey *ecdsa.PrivateKey
-var PublicKey *ecdsa.PublicKey
-
 var Key *key
 
 func init() {
 	os.Setenv("ENVIRONMENT", "test")
 
-	c, err := config.LoadConfig(config.ConfigDefaults)
+	c, err := config.LoadConfig(config.Defaults)
 	if err != nil {
 		panic(err)
 	}
@@ -63,6 +59,12 @@ func TestNewECDSABlank(t *testing.T) {
 	assert.Equal(t, result.Struct().KeyType, "")
 	assert.Equal(t, result.Struct().FingerprintMD5, "")
 	assert.Equal(t, result.Struct().FingerprintSHA, "")
+
+	assert.Equal(t, result.Struct().PrivatePemPath, "")
+	assert.Equal(t, result.Struct().PrivateKeyB64, "")
+	assert.Equal(t, result.Struct().PublicKeyB64, "")
+	assert.Equal(t, result.Struct().PrivateKeyPath, "")
+	assert.Equal(t, result.Struct().PublicKeyPath, "")
 }
 
 func TestImportPublicECDSA256v1(t *testing.T) {
@@ -71,12 +73,12 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA(Config, "some-name", "prime256v1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "prime256v1-name", "prime256v1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
 
-	if k1.Struct().Name != "some-name" {
+	if k1.Struct().Name != "prime256v1-name" {
 		t.Fail()
 	}
 
@@ -84,7 +86,10 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 		t.Fail()
 	}
 
-	t.Log("successfully imported [prime256v1-pubkey]")
+	t.Logf("successfully imported [prime256v1-pubkey] [%s]", k1.FilePointer())
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+		k1.FilePointer()))
 }
 
 func TestImportPublicECDSA384r1(t *testing.T) {
@@ -93,12 +98,12 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	k1, e := ImportPublicECDSA(Config, "some-name", "secp384r1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "secp384r1-name", "secp384r1", pub.GetBody())
 	if e != nil {
 		t.Fail()
 	}
 
-	if k1.Struct().Name != "some-name" {
+	if k1.Struct().Name != "secp384r1-name" {
 		t.Fail()
 	}
 
@@ -106,7 +111,10 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 		t.Fail()
 	}
 
-	t.Log("successfully imported [secp384r1-pubkey]")
+	t.Logf("successfully imported [secp384r1-pubkey] [%s]", k1.FilePointer())
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+		k1.FilePointer()))
 }
 
 func TestImportPublicECDSA512r1(t *testing.T) {
@@ -140,12 +148,12 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 	}
 
 	// Valid key
-	k1, e := ImportPublicECDSA(Config, "some-name", "secp521r1", pub.GetBody())
+	k1, e := ImportPublicECDSA(Config, "secp521r1-name", "secp521r1", pub.GetBody())
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	if k1.Struct().Name != "some-name" {
+	if k1.Struct().Name != "secp521r1-name" {
 		t.Fatalf("k1.Struct().Name did not equal expected valud: %s", k1.Struct().Name)
 	}
 
@@ -153,7 +161,10 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 		t.Fatal("invalid key type")
 	}
 
-	t.Log("successfully imported [secp521r1-pubkey]")
+	t.Logf("successfully imported [secp521r1-pubkey] [%s]", k1.FilePointer())
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+		k1.FilePointer()))
 }
 
 func TestNewECDSA(t *testing.T) {
@@ -178,13 +189,19 @@ func TestNewECDSA(t *testing.T) {
 	if !c.IsOnCurve(p.PublicKey.X, p.PublicKey.Y) {
 		t.Fail()
 	}
+
+	// Check for filesystem keys are present
+	CheckFullKeyFileObjects(t, Config, k, "NewECDSA")
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+		k.FilePointer()))
 }
 
 func BenchmarkSignP224(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-224", "secp224r1")
+	k, err := NewECDSA(Config, "bench-key-224", "secp224r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -207,7 +224,7 @@ func BenchmarkSignP256(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-256", "prime256v1")
+	k, err := NewECDSA(Config, "bench-key-256", "prime256v1")
 	if err != nil {
 		b.Fail()
 	}
@@ -230,7 +247,7 @@ func BenchmarkSignP384(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-384", "secp384r1")
+	k, err := NewECDSA(Config, "bench-key-384", "secp384r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -253,7 +270,7 @@ func BenchmarkSignP521(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-521", "secp521r1")
+	k, err := NewECDSA(Config, "bench-key-521", "secp521r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -276,7 +293,7 @@ func BenchmarkVerifyP224(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-224", "secp224r1")
+	k, err := NewECDSA(Config, "bench-key-224", "secp224r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -298,7 +315,7 @@ func BenchmarkVerifyP256(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-256", "prime256v1")
+	k, err := NewECDSA(Config, "bench-key-256", "prime256v1")
 	if err != nil {
 		b.Fail()
 	}
@@ -320,7 +337,7 @@ func BenchmarkVerifyP384(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-384", "secp384r1")
+	k, err := NewECDSA(Config, "bench-key-384", "secp384r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -342,7 +359,7 @@ func BenchmarkVerifyP521(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")
 
-	k, err := NewECDSA(Config, "test-key-521", "secp521r1")
+	k, err := NewECDSA(Config, "bench-key-521", "secp521r1")
 	if err != nil {
 		b.Fail()
 	}
@@ -372,11 +389,6 @@ func TestGetECDSA(t *testing.T) {
 }
 
 func TestListECDSA(t *testing.T) {
-	_, err := NewECDSA(Config, "context-key", "prime256v1")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	result, err := ListECDSA(Config)
 	if err != nil {
 		t.Fatal(err)

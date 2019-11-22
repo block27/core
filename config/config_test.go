@@ -10,11 +10,11 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-var Config ConfigReader
+var Config Reader
 
 func init() {
 	os.Setenv("ENVIRONMENT", "test")
-	Config, _ = LoadConfig(ConfigDefaults)
+	Config, _ = LoadConfig(Defaults)
 	os.Setenv("ENVIRONMENT", "")
 
 	if Config.GetString("environment") != "test" {

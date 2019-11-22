@@ -90,7 +90,7 @@ openssl_verify:
 	openssl dgst -ecdsa-with-SHA1 -verify public.pem -signature signature.bin file.data
 
 prepare_tests:
-	@rm -rf /tmp/var/keys/* || true
+	@rm -rf /tmp/data/keys
 
 setup_machine:
 	mkdir -p /tmp/data

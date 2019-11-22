@@ -16,8 +16,13 @@ import (
 )
 
 var (
+	// ECPrivateKey ...
 	ECPrivateKey = "EC PRIVATE KEY"
+
+	// ECPublicKey ...
 	ECPublicKey  = "EC PUBLIC KEY"
+
+	// SDPublicKey ...
 	SDPublicKey  = "PUBLIC KEY"
 )
 
@@ -129,8 +134,39 @@ func FingerprintSHA256(publicKey *ecdsa.PublicKey) string {
 	return base64.RawStdEncoding.EncodeToString(sha256sum[:])
 }
 
+
+// EncodePublic ...
+func EncodePublic(publicKey *ecdsa.PublicKey) (string, error) {
+	x509EncodedPub, e := x509.MarshalPKIXPublicKey(publicKey)
+	if e != nil {
+		return "", e
+	}
+
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{
+		Type: SDPublicKey,
+		Bytes: x509EncodedPub,
+	})
+
+	return string(pemEncodedPub), nil
+}
+
+// EncodePrivate ...
+func EncodePrivate(privateKey *ecdsa.PrivateKey) (string, error) {
+	x509Encoded, e := x509.MarshalECPrivateKey(privateKey)
+	if e != nil {
+		return "", e
+	}
+
+	pemEncoded := pem.EncodeToMemory(&pem.Block{
+		Type: ECPrivateKey,
+		Bytes: x509Encoded,
+	})
+
+	return string(pemEncoded), nil
+}
+
 // Encode ...
-func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string, error) {
 	if privateKey == nil {
 		privateKey = &ecdsa.PrivateKey{}
 	}
@@ -139,25 +175,42 @@ func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
 		publicKey = &ecdsa.PublicKey{}
 	}
 
-	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: ECPrivateKey, Bytes: x509Encoded})
+	x509Encoded, e := x509.MarshalECPrivateKey(privateKey)
+	if e != nil {
+		return "", "", e
+	}
 
-	x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: SDPublicKey, Bytes: x509EncodedPub})
+	pemEncoded := pem.EncodeToMemory(&pem.Block{
+		Type: ECPrivateKey,
+		Bytes: x509Encoded,
+	})
 
-	return string(pemEncoded), string(pemEncodedPub)
+	x509EncodedPub, e := x509.MarshalPKIXPublicKey(publicKey)
+	if e != nil {
+		return "", "", e
+	}
+
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{
+		Type: SDPublicKey,
+		Bytes: x509EncodedPub,
+	})
+
+	return string(pemEncoded), string(pemEncodedPub), nil
 }
 
 // Decode ...
-func Decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
+func Decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	block, _ := pem.Decode([]byte(pemEncoded))
-	x509Encoded := block.Bytes
-	privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
+	privateKey, e := x509.ParseECPrivateKey(block.Bytes)
+	if e != nil {
+		return nil, nil, e
+	}
 
 	blockPub, _ := pem.Decode([]byte(pemEncodedPub))
-	x509EncodedPub := blockPub.Bytes
-	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
-	publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	genericPublicKey, e := x509.ParsePKIXPublicKey(blockPub.Bytes)
+	if e != nil {
+		return nil, nil, e
+	}
 
-	return privateKey, publicKey
+	return privateKey, genericPublicKey.(*ecdsa.PublicKey), nil
 }

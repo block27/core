@@ -27,7 +27,7 @@ var (
 // Backend - main struct for the entire application configuration
 type Backend struct {
 	// C - contains the yaml file configuration key/values and other env specifics
-	C *config.ConfigReader
+	C *config.Reader
 
 	// D - the main connector to BBoltDB via services/bbolt
 	D bbolt.Datastore
@@ -42,7 +42,7 @@ func init() {
 
 // NewBackend - factory method for producing a new type of Backend
 func NewBackend() (*Backend, error) {
-	c, err := config.LoadConfig(config.ConfigDefaults)
+	c, err := config.LoadConfig(config.Defaults)
 	if err != nil {
 		return nil, err
 	}
