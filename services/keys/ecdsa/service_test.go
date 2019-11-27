@@ -197,6 +197,11 @@ func TestNewECDSA(t *testing.T) {
 		k.FilePointer()))
 }
 
+func TestVerifyReadability(t *testing.T) {
+	// we should confirm that the keys saved with the gobencoder should be decoded
+	// and verified their identity/data pub/pri keys
+}
+
 func BenchmarkSignP224(b *testing.B) {
 	b.ResetTimer()
 	hashed := []byte("testing")

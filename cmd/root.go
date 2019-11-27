@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	cfgFile     string
-	userLicense string
+	// DryRun does not commit or change data
+	DryRun bool
 
 	// B - main backend interface that holds all functionality
 	B *backend.Backend
@@ -27,16 +27,20 @@ var (
 // Execute executes the root command.
 func Execute(b *backend.Backend) error {
 	B = b
+
 	return rootCmd.Execute()
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(preConfig)
 
 	// root
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(keysCmd)
 	rootCmd.AddCommand(infoCmd)
+
+	// flags
+	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "dry, no commits to real data")
 
 	// keys
 	keysCmd.AddCommand(keysCreateCmd)
@@ -45,27 +49,17 @@ func init() {
 	keysCmd.AddCommand(keysSignCmd)
 	keysCmd.AddCommand(keysVerifyCmd)
 	keysCmd.AddCommand(keysImportPubCmd)
+
+	// Fire post configuration
+	postConfig()
 }
 
-func initConfig() {
-	// if cfgFile != "" {
-	// 	// Use config file from the flag.
-	// 	viper.SetConfigFile(cfgFile)
-	// } else {
-	// 	// Find home directory.
-	// 	home, err := homedir.Dir()
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	//
-	// 	// Search config in home directory with name ".cobra" (without extension).
-	// 	viper.AddConfigPath(home)
-	// 	viper.SetConfigName(".cobra")
-	// }
-	//
-	// viper.AutomaticEnv()
-	//
-	// if err := viper.ReadInConfig(); err == nil {
-	// 	fmt.Println("Using config file:", viper.ConfigFileUsed())
-	// }
+func preConfig() {
+	if DryRun {
+		fmt.Printf("%s", h.YFgB("*** --dry-run enabled, no data will be saved ***\n"))
+	}
+}
+
+func postConfig() {
+	// ...
 }

@@ -37,3 +37,26 @@ if err := b.D.InsertKey([]byte(kF.FilePointer()), []byte(objB64)); err != nil {
 
 // Multisignature scheme
 https://github.com/bford/golang-x-crypto/blob/master/ed25519/cosi/example_test.go
+
+
+// cmd/root.go
+// if cfgFile != "" {
+// 	// Use config file from the flag.
+// 	viper.SetConfigFile(cfgFile)
+// } else {
+// 	// Find home directory.
+// 	home, err := homedir.Dir()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+//
+// 	// Search config in home directory with name ".cobra" (without extension).
+// 	viper.AddConfigPath(home)
+// 	viper.SetConfigName(".cobra")
+// }
+//
+// viper.AutomaticEnv()
+//
+// if err := viper.ReadInConfig(); err == nil {
+// 	fmt.Println("Using config file:", viper.ConfigFileUsed())
+// }

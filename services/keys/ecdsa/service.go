@@ -132,7 +132,9 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 	}
 
 	// Write the entire key object to FS
-	key.writeToFS(c, nil, pub)
+	if err := key.writeToFS(c, nil, pub); err != nil {
+		return nil, err
+	}
 
 	return key, nil
 }
@@ -141,11 +143,13 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 // complicated but what happens here is complete key generation using our
 // cyrpto/rand lib
 func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
+	// Validate the type of curve passed
 	ec, ty, err := getCurve(curve)
 	if err != nil {
 		return nil,  err
 	}
 
+	// Generate the private key with our own io.Reader
 	pri, err := ecdsa.GenerateKey(ec, crypto.Reader)
 	if err != nil {
 		return nil, err
@@ -159,6 +163,12 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	if perr != nil {
 		return  nil, perr
 	}
+
+	fmt.Printf("pri: \n%s\n", pri)
+	fmt.Printf("pub: \n%s\n", pub)
+
+	fmt.Printf("pemKey: \n%s\n", pemKey)
+	fmt.Printf("pemPub: \n%s\n", pemPub)
 
 	// Create the key struct object
 	key := &key{
@@ -175,7 +185,9 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	}
 
 	// Write the entire key object to FS
-	key.writeToFS(c, pri, pub)
+	if err := key.writeToFS(c, pri, pub); err != nil {
+		return nil, err
+	}
 
 	return key, nil
 }
