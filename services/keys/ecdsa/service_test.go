@@ -1,9 +1,14 @@
 package ecdsa
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/gob"
 	"fmt"
+	"math/big"
 	"os"
 	"reflect"
 	"regexp"
@@ -197,9 +202,79 @@ func TestNewECDSA(t *testing.T) {
 		k.FilePointer()))
 }
 
+func DecodeECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
+	var p []big.Int
+	buf := bytes.NewBuffer(b)
+
+	gob.Register(&ecdsa.PrivateKey{})
+
+	dec := gob.NewDecoder(buf)
+	err := dec.Decode(&p)
+	if err != nil {
+		return nil, err
+	}
+	privateKey := new(ecdsa.PrivateKey)
+	privateKey.PublicKey.X = &p[0]
+	privateKey.PublicKey.Y = &p[1]
+	privateKey.D = &p[2]
+
+	fmt.Println(&p[0])
+	fmt.Println(&p[1])
+	return privateKey, nil
+}
+
 func TestVerifyReadability(t *testing.T) {
 	// we should confirm that the keys saved with the gobencoder should be decoded
 	// and verified their identity/data pub/pri keys
+
+	k, e := GetECDSA(Config, Key.FilePointer())
+	if e != nil {
+		t.Fail()
+	}
+
+	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), k.FilePointer())
+	prPa := fmt.Sprintf("%s/private.key", path)
+
+	priBytes, _ := helpers.ReadBinary(prPa)
+	private, perr := x509.ParseECPrivateKey(priBytes)
+	if perr != nil {
+		t.Fatal(perr)
+	}
+
+	pri, err := k.getPrivateKey()
+	if err != nil || private ==  nil {
+		t.Fatal(err)
+	}
+
+	// Test PrivateKey
+	if !testEq(pri.D.Bytes(), private.D.Bytes()) {
+		t.Fail()
+	}
+
+	if !testEq(pri.X.Bytes(), private.X.Bytes()) {
+		t.Fail()
+	}
+
+	if !testEq(pri.Y.Bytes(), private.Y.Bytes()) {
+		t.Fail()
+	}
+
+	// Test PublicKey
+	if !testEq(pri.PublicKey.X.Bytes(), private.PublicKey.X.Bytes()) {
+		t.Fail()
+	}
+
+	if !testEq(pri.PublicKey.Y.Bytes(), private.PublicKey.Y.Bytes()) {
+		t.Fail()
+	}
+
+	if pri.Params().BitSize != 256 {
+		t.Fail()
+	}
+
+	if private.Params().BitSize != 256 {
+		t.Fail()
+	}
 }
 
 func BenchmarkSignP224(b *testing.B) {
@@ -586,4 +661,22 @@ func checkFields(original *key, copied *key) error {
 	}
 
 	return nil
+}
+
+func testEq(a, b []byte) bool {
+    if (a == nil) != (b == nil) {
+        return false;
+    }
+
+    if len(a) != len(b) {
+        return false
+    }
+
+    for i := range a {
+        if a[i] != b[i] {
+            return false
+        }
+    }
+
+    return true
 }

@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"os/exec"
 	"os/user"
@@ -164,11 +165,11 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 		return  nil, perr
 	}
 
-	fmt.Printf("pri: \n%s\n", pri)
-	fmt.Printf("pub: \n%s\n", pub)
-
-	fmt.Printf("pemKey: \n%s\n", pemKey)
-	fmt.Printf("pemPub: \n%s\n", pemPub)
+	// fmt.Printf("pri: \n%s\n", pri)
+	// fmt.Printf("pub: \n%s\n", pub)
+	//
+	// fmt.Printf("pemKey: \n%s\n", pemKey)
+	// fmt.Printf("pemPub: \n%s\n", pemPub)
 
 	// Create the key struct object
 	key := &key{
@@ -190,83 +191,6 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	}
 
 	return key, nil
-}
-
-// writeToFS
-func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
-	// Create the keys root directory based on it's FilePointer method
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		os.Mkdir(dirPath, os.ModePerm)
-	}
-
-	k.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
-	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
-	k.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
-
-	// OBJ marshalling -----------------------------------------------------------
-	objPath := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
-	objFile, err := os.Create(objPath)
-	if err != nil {
-		return err
-	}
-	defer objFile.Close()
-
-	// Marshall the objects
-	obj, err := keyToGOB64(k)
-	if err != nil {
-		return err
-	}
-
-	if _, err := helpers.WriteBinary(objPath, []byte(obj)); err != nil {
-		return err
-	}
-
-	// Public Key ----------------------------------------------------------------
-	if pub !=  nil {
-		publickeyFile, err := os.Create(k.PublicKeyPath)
-		if err != nil {
-			return err
-		}
-
-		publickeyencoder := gob.NewEncoder(publickeyFile)
-		publickeyencoder.Encode(pub)
-		publickeyFile.Close()
-	}
-
-	// Private Key ---------------------------------------------------------------
-	if pri != nil {
-		privatekeyFile, err := os.Create(k.PrivateKeyPath)
-		if err != nil {
-			return err
-		}
-
-		privatekeyencoder := gob.NewEncoder(privatekeyFile)
-		privatekeyencoder.Encode(pri)
-		privatekeyFile.Close()
-
-		// Private Pem -------------------------------------------------------------
-		pemfile, err := os.Create(k.PrivatePemPath)
-		if err != nil {
-			return err
-		}
-
-		// Marshall the private key to PKCS8
-		pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
-		if pemErr != nil {
-			return pemErr
-		}
-
-		// Create pem file
-		if  e := pem.Encode(pemfile, &pem.Block{
-			Type:  enc.ECPrivateKey,
-			Bytes: pem509,
-		}); e != nil {
-			return e
-		}
-	}
-
-	return nil
 }
 
 // GetECDSA fetches a system key that lives on the file system. Return useful
@@ -303,11 +227,6 @@ func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 	for _, f := range files {
 		_key, _err := GetECDSA(c, f.Name())
 
-		// switch _err.(type) {
-		// case *eer.KeyObjt:
-		// 	continue;
-		// }
-
 		if _err != nil {
 			return nil, _err
 		}
@@ -335,7 +254,6 @@ func (k *key) Marshall() (string, error) {
 }
 
 // Unmarshall ...
-//
 func (k *key) Unmarshall(obj string) (KeyAPI, error) {
 	d, err := keyFromGOB64(obj)
 	if err != nil {
@@ -385,6 +303,116 @@ func (k *key) Verify(hash []byte, sig *sig.Signature) bool {
 	}
 
 	return ecdsa.Verify(pub, hash, sig.R, sig.S)
+}
+
+// writeToFS
+func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
+	// Create the keys root directory based on it's FilePointer method
+	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, os.ModePerm)
+	}
+
+	k.PublicKeyPath = fmt.Sprintf("%s/%s", dirPath, "public.key")
+	k.PrivateKeyPath = fmt.Sprintf("%s/%s", dirPath, "private.key")
+	k.PrivatePemPath = fmt.Sprintf("%s/%s", dirPath, "private.pem")
+
+	// OBJ marshalling -----------------------------------------------------------
+	objPath := fmt.Sprintf("%s/%s", dirPath, "obj.bin")
+	objFile, err := os.Create(objPath)
+	if err != nil {
+		return err
+	}
+	defer objFile.Close()
+
+	// Marshall the objects
+	obj, err := keyToGOB64(k)
+	if err != nil {
+		return err
+	}
+
+	if _, err := helpers.WriteBinary(objPath, []byte(obj)); err != nil {
+		return err
+	}
+
+	// Public Key ----------------------------------------------------------------
+	if pub !=  nil {
+		publickeyFile, err := os.Create(k.PublicKeyPath)
+		if err != nil {
+			return err
+		}
+
+		// pubBytes, pubErr := x509.Marsh
+		// if pubErr != nil {
+		// 	return pubErr
+		// }
+
+		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+		if err != nil {
+		return err
+		}
+
+		publickeyFile.Write(pubBytes)
+		publickeyFile.Close()
+	}
+
+	// Private Key ---------------------------------------------------------------
+	if pri != nil {
+		privatekeyFile, err := os.Create(k.PrivateKeyPath)
+		if err != nil {
+			return err
+		}
+
+		priBytes, priErr := x509.MarshalECPrivateKey(pri)
+		if priErr != nil {
+			return priErr
+		}
+
+		privatekeyFile.Write(priBytes)
+		privatekeyFile.Close()
+
+		// Private Pem -------------------------------------------------------------
+		pemfile, err := os.Create(k.PrivatePemPath)
+		if err != nil {
+			return err
+		}
+
+		// Marshall the private key to PKCS8
+		pem509, pemErr := x509.MarshalPKCS8PrivateKey(pri)
+		if pemErr != nil {
+			return pemErr
+		}
+
+		// Create pem file
+		if  e := pem.Encode(pemfile, &pem.Block{
+			Type:  enc.ECPrivateKey,
+			Bytes: pem509,
+		}); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
+func encodeECDSAPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	err := enc.Encode([]big.Int{*key.X, *key.Y, *key.D})
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func encodeECDSAPublicKey(key *ecdsa.PublicKey) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	err := enc.Encode([]big.Int{*key.X, *key.Y})
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // getCurve checks the string param matched and should return a valid ec curve

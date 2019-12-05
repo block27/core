@@ -74,6 +74,9 @@ lint:
 openssl_cpu_speed:
 	openssl speed -elapsed aes-128-cbc
 
+openssl_list_curves:
+	openssl ecparam -list_curves
+
 openssl_hardware_accelerated:
 	openssl speed -elapsed -evp aes-128-cbc
 
