@@ -155,6 +155,29 @@ func GetEDDSA(c config.Reader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
+// ListECDSA returns a list of active keys stored on the local filesystem. Of
+// which are all encrypted via AES from the hardware block
+func ListECDSA(c config.Reader) ([]KeyAPI, error) {
+	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []KeyAPI
+
+	for _, f := range files {
+		_key, _err := GetEDDSA(c, f.Name())
+
+		if _err != nil {
+			return nil, _err
+		}
+
+		keys = append(keys, _key)
+	}
+
+	return keys, nil
+}
+
 // writeToFS
 func (k *key) writeToFS(c config.Reader, pri *privateKey, pub *publicKey) error {
 	// Create the keys root directory based on it's FilePointer method

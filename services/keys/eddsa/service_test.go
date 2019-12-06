@@ -58,6 +58,28 @@ func TestNewEDDSA(t *testing.T) {
 	assertStructCorrectness(t, k)
 }
 
+func TestGetECDSA(t *testing.T) {
+	k, err := GetEDDSA(Config, Key.FilePointer())
+	if err != nil {
+		t.Fail()
+	}
+
+	assertStructCorrectness(t, k)
+}
+
+func TestListECDSA(t *testing.T) {
+	keys, err := ListECDSA(Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(keys) == 0 {
+		t.Fatal("0 keys returned, should be < 1")
+	}
+
+	assertStructCorrectness(t, keys[0])
+}
+
 // TestVerifyReadability ...
 // we should confirm that the keys saved with the gobencoder should be decoded
 // and verified their identity/data pub/pri keys
