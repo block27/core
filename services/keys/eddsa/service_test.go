@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/amanelis/bespin/config"
+	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/test"
 
 	"github.com/amanelis/bespin/utils"
 	"github.com/stretchr/testify/assert"
@@ -38,49 +40,82 @@ func init() {
 	Config = c
 }
 
-func TestNewED25519Blank(t *testing.T) {
-	result, err := NewED25519Blank(Config)
+func TestNewEDDSABlank(t *testing.T) {
+	k, err := NewEDDSABlank(Config)
 	if err != nil {
 		t.Fail()
 	}
 
-	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
-	assert.Equal(t, result.Struct().Name, "")
-	assert.Equal(t, result.Struct().Slug, "")
-	assert.Equal(t, result.Struct().Status, "")
-	assert.Equal(t, result.Struct().KeyType, "")
-	assert.Equal(t, result.Struct().FingerprintMD5, "")
-	assert.Equal(t, result.Struct().FingerprintSHA, "")
-
-	assert.Equal(t, result.Struct().PrivatePemPath, "")
-	assert.Equal(t, result.Struct().PrivateKeyB64, "")
-	assert.Equal(t, result.Struct().PublicKeyB64, "")
-	assert.Equal(t, result.Struct().PrivateKeyPath, "")
-	assert.Equal(t, result.Struct().PublicKeyPath, "")
+	assertStructNilness(t, k)
 }
 
 func TestNewEDDSA(t *testing.T) {
-	// Valid
 	k, err := NewEDDSA(Config, "test-key-1")
 	if err != nil {
 		t.Fail()
 	}
 
-	assert.NotNil(t, k.Struct().GID)
-	assert.NotNil(t, k.Struct().Name)
-	assert.NotNil(t, k.Struct().Slug)
-	assert.NotNil(t, k.Struct().FingerprintMD5)
-	assert.NotNil(t, k.Struct().FingerprintSHA)
+	assertStructCorrectness(t, k)
+}
 
-	assert.NotNil(t, k.Struct().PrivatePemPath)
-	assert.NotNil(t, k.Struct().PrivateKeyB64)
-	assert.NotNil(t, k.Struct().PublicKeyB64)
-	assert.NotNil(t, k.Struct().PrivateKeyPath)
-	assert.NotNil(t, k.Struct().PublicKeyPath)
+// TestVerifyReadability ...
+// we should confirm that the keys saved with the gobencoder should be decoded
+// and verified their identity/data pub/pri keys
+func TestVerifyReadability(t *testing.T) {
+	newKey, err := NewEDDSA(Config, "test-key-P")
+	if err != nil {
+		t.Fail()
+	}
 
-	assert.Equal(t, k.Struct().Status, "active")
-	assert.Equal(t, k.Struct().KeyType, "eddsa.PrivateKey <==> ed25519")
+	assertStructCorrectness(t, newKey)
 
+	getKey, e := GetEDDSA(Config, newKey.FilePointer())
+	if e != nil {
+		t.Fail()
+	}
+
+	assertStructCorrectness(t, getKey)
+
+	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
+	t.Logf("Path reference: %s\n", path)
+
+	priBytes, perr := helpers.ReadBinary(fmt.Sprintf("%s/private.key", path))
+	if perr != nil {
+		t.Fatal(perr)
+	}
+
+	pubBytes, perr := helpers.ReadBinary(fmt.Sprintf("%s/public.key", path))
+	if perr != nil {
+		t.Fatal(perr)
+	}
+
+	// Must first load the key found
+	getKey.Struct().privateKey.FromBytes(priBytes)
+	getKey.Struct().publicKey.FromBytes(pubBytes)
+
+	pPubKey, pPubErr := getKey.Struct().getPublicKey()
+	if pPubErr != nil {
+		t.Fatal(pPubErr)
+	}
+
+	pPriKey, pPriErr := getKey.Struct().getPrivateKey()
+	if pPriErr != nil {
+		t.Fatal(pPriErr)
+	}
+
+	t.Logf("publicKey(get): %x\n", getKey.Struct().privateKey.pubKey.pubKey)
+	t.Logf("publicKey(new): %x\n", *pPubKey)
+
+	if !test.ByteEq(t, getKey.Struct().privateKey.pubKey.pubKey, *pPubKey) {
+		t.Fatal("publicKeys do not match")
+	}
+
+	t.Logf("privateKeys(get): %x\n", getKey.Struct().privateKey.privKey)
+	t.Logf("privateKeys(new): %x\n", *pPriKey)
+
+	if !test.ByteEq(t, getKey.Struct().privateKey.privKey, *pPriKey) {
+		t.Fatal("privateKeys do not match")
+	}
 }
 
 func TestKeypair(t *testing.T) {
@@ -91,7 +126,7 @@ func TestKeypair(t *testing.T) {
 	privKey, err := NewKeypair(rand.Reader)
 	require.NoError(t, err, "NewKeypair()")
 
-	var privKey2 PrivateKey
+	var privKey2 privateKey
 	assert.Error(privKey2.FromBytes(shortBuffer), "PrivateKey.FromBytes(short)")
 
 	err = privKey2.FromBytes(privKey.Bytes())
@@ -101,7 +136,7 @@ func TestKeypair(t *testing.T) {
 	privKey2.Reset()
 	assert.True(utils.CtIsZero(privKey2.privKey), "PrivateKey.Reset()")
 
-	var pubKey PublicKey
+	var pubKey publicKey
 	assert.Error(pubKey.FromBytes(shortBuffer), "PublicKey.FromBytes(short)")
 
 	err = pubKey.FromBytes(privKey.PublicKey().Bytes())
@@ -129,4 +164,39 @@ func TestEdDSAOps(t *testing.T) {
 	dhPrivKey := privKey.ToECDH()
 	dhPubKey := privKey.PublicKey().ToECDH()
 	assert.True(dhPrivKey.PublicKey().Equal(dhPubKey), "ToECDH() basic sanity")
+}
+
+func assertStructCorrectness(t *testing.T, k KeyAPI) {
+	t.Helper()
+
+	assert.NotNil(t, k.Struct().GID)
+	assert.NotNil(t, k.Struct().Name)
+	assert.NotNil(t, k.Struct().Slug)
+	assert.NotNil(t, k.Struct().FingerprintMD5)
+	assert.NotNil(t, k.Struct().FingerprintSHA)
+
+	assert.NotNil(t, k.Struct().PrivatePemPath)
+	assert.NotNil(t, k.Struct().PrivateKeyB64)
+	assert.NotNil(t, k.Struct().PublicKeyB64)
+	assert.NotNil(t, k.Struct().PrivateKeyPath)
+	assert.NotNil(t, k.Struct().PublicKeyPath)
+
+	assert.Equal(t, k.Struct().Status, "active")
+	assert.Equal(t, k.Struct().KeyType, "eddsa.PrivateKey <==> ed25519")
+}
+
+func assertStructNilness(t *testing.T, k KeyAPI) {
+	assert.Equal(t, k.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
+	assert.Equal(t, k.Struct().Name, "")
+	assert.Equal(t, k.Struct().Slug, "")
+	assert.Equal(t, k.Struct().Status, "")
+	assert.Equal(t, k.Struct().KeyType, "")
+	assert.Equal(t, k.Struct().FingerprintMD5, "")
+	assert.Equal(t, k.Struct().FingerprintSHA, "")
+
+	assert.Equal(t, k.Struct().PrivatePemPath, "")
+	assert.Equal(t, k.Struct().PrivateKeyB64, "")
+	assert.Equal(t, k.Struct().PublicKeyB64, "")
+	assert.Equal(t, k.Struct().PrivateKeyPath, "")
+	assert.Equal(t, k.Struct().PublicKeyPath, "")
 }

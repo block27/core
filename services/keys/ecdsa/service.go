@@ -16,14 +16,14 @@ import (
 	"sync"
 	"time"
 
-	api "github.com/amanelis/bespin/services/keys/api"
-	eer "github.com/amanelis/bespin/services/keys/ecdsa/errors"
-	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
-	mar "github.com/amanelis/bespin/services/keys/ecdsa/marshall"
-	sig "github.com/amanelis/bespin/services/keys/ecdsa/signature"
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
+	api "github.com/amanelis/bespin/services/keys/api"
+	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
+	mar "github.com/amanelis/bespin/services/keys/ecdsa/marshall"
+	sig "github.com/amanelis/bespin/services/keys/ecdsa/signature"
+	eer "github.com/amanelis/bespin/services/keys/errors"
 
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
@@ -97,7 +97,7 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	// Validate the type of curve passed
 	ec, ty, err := getCurve(curve)
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 
 	// Generate the private key with our own io.Reader
@@ -112,7 +112,7 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	// PEM #1 - encoding
 	pemKey, pemPub, perr := enc.Encode(pri, pub)
 	if perr != nil {
-		return  nil, perr
+		return nil, perr
 	}
 
 	// Create the key struct object
@@ -136,55 +136,6 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 
 	key.privateKey = pri
 	key.publicKey = pub
-
-	return key, nil
-}
-
-// ImportPublicECDSA imports an existing ECDSA key into a KeyAPI object for
-// use in the Service API. Since you are importing a public Key, this will be
-// an incomplete Key object.
-func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte) (KeyAPI, error) {
-	if name == "" {
-		return nil, fmt.Errorf("name cannot be empty")
-	}
-
-	if curve == "" {
-		return nil, fmt.Errorf("curve cannot be empty")
-	}
-
-	_, ty, err := getCurve(curve)
-	if err != nil {
-		return nil,  err
-	}
-
-	pub, err := mar.DecodePublicKey(public)
-	if err != nil {
-		return nil, err
-	}
-
-	pem, perr := enc.EncodePublic(pub)
-	if perr != nil {
-		return  nil, perr
-	}
-
-	// Resulting key will not be complete - create the key struct object anyways
-	key := &key{
-		GID:            api.GenerateUUID(),
-		Name:           name,
-		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeyType:        fmt.Sprintf("ecdsa.PublicKey <==> %s", ty),
-		Status:         api.StatusActive,
-		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
-		PrivateKeyB64:  "",
-		FingerprintMD5: enc.FingerprintMD5(pub),
-		FingerprintSHA: enc.FingerprintSHA256(pub),
-		CreatedAt:      time.Now(),
-	}
-
-	// Write the entire key object to FS
-	if err := key.writeToFS(c, nil, pub); err != nil {
-		return nil, err
-	}
 
 	return key, nil
 }
@@ -231,6 +182,58 @@ func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 	}
 
 	return keys, nil
+}
+
+// ImportPublicECDSA imports an existing ECDSA key into a KeyAPI object for
+// use in the Service API. Since you are importing a public Key, this will be
+// an incomplete Key object.
+func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte) (KeyAPI, error) {
+	if name == "" {
+		return nil, fmt.Errorf("name cannot be empty")
+	}
+
+	if curve == "" {
+		return nil, fmt.Errorf("curve cannot be empty")
+	}
+
+	_, ty, err := getCurve(curve)
+	if err != nil {
+		return nil, err
+	}
+
+	pub, err := mar.DecodePublicKey(public)
+	if err != nil {
+		return nil, err
+	}
+
+	pem, perr := enc.EncodePublic(pub)
+	if perr != nil {
+		return nil, perr
+	}
+
+	// Resulting key will not be complete - create the key struct object anyways
+	key := &key{
+		GID:            api.GenerateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeyType:        fmt.Sprintf("ecdsa.PublicKey <==> %s", ty),
+		Status:         api.StatusActive,
+		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pem)),
+		PrivateKeyB64:  "",
+		FingerprintMD5: enc.FingerprintMD5(pub),
+		FingerprintSHA: enc.FingerprintSHA256(pub),
+		CreatedAt:      time.Now(),
+	}
+
+	// Write the entire key object to FS
+	if err := key.writeToFS(c, nil, pub); err != nil {
+		return nil, err
+	}
+
+	key.privateKey = nil
+	key.publicKey = pub
+
+	return key, nil
 }
 
 // FilePointer returns a string that will represent the path the key can be
@@ -332,7 +335,7 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 	}
 
 	// Public Key ----------------------------------------------------------------
-	if pub !=  nil {
+	if pub != nil {
 		publickeyFile, err := os.Create(k.PublicKeyPath)
 		if err != nil {
 			return err
@@ -340,7 +343,7 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 
 		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 		if err != nil {
-		return err
+			return err
 		}
 
 		publickeyFile.Write(pubBytes)
@@ -375,7 +378,7 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 		}
 
 		// Create pem file
-		if  e := pem.Encode(pemfile, &pem.Block{
+		if e := pem.Encode(pemfile, &pem.Block{
 			Type:  enc.ECPrivateKey,
 			Bytes: pem509,
 		}); e != nil {
@@ -389,13 +392,13 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 // getCurve checks the string param matched and should return a valid ec curve
 func getCurve(curve string) (elliptic.Curve, string, error) {
 	switch curve {
-	case "secp224r1":  // secp224r1: NIST/SECG curve over a 224 bit prime field
+	case "secp224r1": // secp224r1: NIST/SECG curve over a 224 bit prime field
 		return elliptic.P224(), "secp224r1", nil
 	case "prime256v1": // prime256v1: X9.62/SECG curve over a 256 bit prime field
 		return elliptic.P256(), "prime256v1", nil
-	case "secp384r1":  // secp384r1: NIST/SECG curve over a 384 bit prime field
+	case "secp384r1": // secp384r1: NIST/SECG curve over a 384 bit prime field
 		return elliptic.P384(), "secp384r1", nil
-	case "secp521r1":  // secp521r1: NIST/SECG curve over a 521 bit prime field
+	case "secp521r1": // secp521r1: NIST/SECG curve over a 521 bit prime field
 		return elliptic.P521(), "secp521r1", nil
 	default:
 		return nil, "", fmt.Errorf("%s", helpers.RFgB("incorrect curve size passed"))

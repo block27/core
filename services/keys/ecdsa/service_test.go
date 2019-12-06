@@ -18,6 +18,7 @@ import (
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
+	"github.com/amanelis/bespin/test"
 
 	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
 )
@@ -227,65 +228,71 @@ func DecodeECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+// TestVerifyReadability ...
+// we should confirm that the keys saved with the gobencoder should be decoded
+// and verified their identity/data pub/pri keys
 func TestVerifyReadability(t *testing.T) {
-	// we should confirm that the keys saved with the gobencoder should be decoded
-	// and verified their identity/data pub/pri keys
-
-	k, e := GetECDSA(Config, Key.FilePointer())
+	getKey, e := GetECDSA(Config, Key.FilePointer())
 	if e != nil {
 		t.Fail()
 	}
 
-	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), k.FilePointer())
-	prPa := fmt.Sprintf("%s/private.key", path)
+	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
+	t.Logf("Path reference: %s\n", path)
 
-	priBytes, _ := helpers.ReadBinary(prPa)
-	private, perr := x509.ParseECPrivateKey(priBytes)
-	if perr != nil {
-		t.Fatal(perr)
+	priBytes, _ := helpers.ReadBinary(fmt.Sprintf("%s/private.key", path))
+	datPri, datErr := x509.ParseECPrivateKey(priBytes)
+	if datErr != nil {
+		t.Fatal(datErr)
 	}
 
-	pri, err := k.getPrivateKey()
-	if err != nil || private ==  nil {
-		t.Fatal(err)
+	getPri, getErr := getKey.getPrivateKey()
+	if getErr != nil || getPri == nil {
+		t.Fatal(getErr)
 	}
 
 	// Test PrivateKey
-	if !testEq(pri.D.Bytes(), private.D.Bytes()) {
-		t.Fatal("pri(D).Bytes: did not match private")
+	t.Logf("getPri(D): %x\n", getPri.D.Bytes())
+	t.Logf("datPri(D): %x\n", datPri.D.Bytes())
+	if !test.ByteEq(t, getPri.D.Bytes(), datPri.D.Bytes()) {
+		t.Fatal("getPri(D).Bytes: did not match datPri")
 	}
 
-	if !testEq(pri.X.Bytes(), private.X.Bytes()) {
-		t.Fatal("pri(X).Bytes: did not match private")
+	t.Logf("getPri(X): %x\n", getPri.X.Bytes())
+	t.Logf("datPri(X): %x\n", datPri.X.Bytes())
+	if !test.ByteEq(t, getPri.X.Bytes(), datPri.X.Bytes()) {
+		t.Fatal("getPri(X).Bytes: did not match datPri")
 	}
 
-	if !testEq(pri.Y.Bytes(), private.Y.Bytes()) {
-		t.Fatal("pri(Y).Bytes: did not match private")
+	t.Logf("getPri(Y): %x\n", getPri.Y.Bytes())
+	t.Logf("datPri(Y): %x\n", datPri.Y.Bytes())
+	if !test.ByteEq(t, getPri.Y.Bytes(), datPri.Y.Bytes()) {
+		t.Fatal("getPri(Y).Bytes: did not match datPri")
 	}
 
 	// Test PublicKey
-	if !testEq(pri.PublicKey.X.Bytes(), private.PublicKey.X.Bytes()) {
-		t.Fatal("pub(X).Bytes: did not match private.PublicKey")
+	if !test.ByteEq(t, getPri.PublicKey.X.Bytes(), datPri.PublicKey.X.Bytes()) {
+		t.Fatal("getPri.pub(X).Bytes: did not match datPri.PublicKey")
 	}
 
-	if !testEq(pri.PublicKey.Y.Bytes(), private.PublicKey.Y.Bytes()) {
-		t.Fatal("pub(Y).Bytes: did not match private.PublicKey")
+	if !test.ByteEq(t, getPri.PublicKey.Y.Bytes(), datPri.PublicKey.Y.Bytes()) {
+		t.Fatal("getPri.pub(Y).Bytes: did not match datPri.PublicKey")
 	}
 
-	if pri.Params().BitSize != 256 {
-		t.Fatal("pri: bitsize did not match")
+	if getPri.Params().BitSize != 256 {
+		t.Fatal("getPri: bitsize did not match")
 	}
 
-	if private.Params().BitSize != 256 {
-		t.Fatal("private: bitsize did not match")
+	if datPri.Params().BitSize != 256 {
+		t.Fatal("datPri: bitsize did not match")
 	}
 
-	pemKey1, pemPub1, pemErr1 := enc.Encode(pri, &pri.PublicKey)
+	pemKey1, pemPub1, pemErr1 := enc.Encode(getPri, &getPri.PublicKey)
 	if pemErr1 != nil {
 		t.Fatal("Failed: enc.Encode(1)")
 	}
 
-	pemKey2, pemPub2, pemErr2 := enc.Encode(private, &private.PublicKey)
+	pemKey2, pemPub2, pemErr2 := enc.Encode(datPri, &datPri.PublicKey)
 	if pemErr2 != nil {
 		t.Fatal("Failed: enc.Encode(2)")
 	}
@@ -503,13 +510,13 @@ func TestListECDSA(t *testing.T) {
 
 func TestGetCurve(t *testing.T) {
 	for _, curve := range Curves {
-		if _, c, e := getCurve(curve); e !=nil || c != curve  {
+		if _, c, e := getCurve(curve); e != nil || c != curve {
 			t.Fatalf("failed to getCurve on %s", curve)
 		}
 	}
 
 	// invalid
-	if _, _, e := getCurve("junk"); e ==nil  {
+	if _, _, e := getCurve("junk"); e == nil {
 		t.Fail()
 	}
 }
@@ -686,10 +693,6 @@ func checkFields(original *key, copied *key) error {
 		return fmt.Errorf("failed[Status]")
 	}
 
-	// if !reflect.DeepEqual(original.KeySize, copied.KeySize) {
-	// 	return fmt.Errorf("failed[KeySize]")
-	// }
-
 	if !reflect.DeepEqual(original.FingerprintSHA, copied.FingerprintSHA) {
 		return fmt.Errorf("failed[FingerprintSHA]")
 	}
@@ -719,22 +722,4 @@ func checkFields(original *key, copied *key) error {
 	}
 
 	return nil
-}
-
-func testEq(a, b []byte) bool {
-    if (a == nil) != (b == nil) {
-        return false;
-    }
-
-    if len(a) != len(b) {
-        return false
-    }
-
-    for i := range a {
-        if a[i] != b[i] {
-            return false
-        }
-    }
-
-    return true
 }
