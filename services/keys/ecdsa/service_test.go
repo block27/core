@@ -1,14 +1,10 @@
 package ecdsa
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/gob"
 	"fmt"
-	"math/big"
 	"os"
 	"reflect"
 	"regexp"
@@ -203,29 +199,6 @@ func TestNewECDSA(t *testing.T) {
 
 	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
 		k.FilePointer()))
-}
-
-func DecodeECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
-	var p []big.Int
-	buf := bytes.NewBuffer(b)
-
-	gob.Register(&ecdsa.PrivateKey{})
-
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&p)
-	if err != nil {
-		return nil, err
-	}
-
-	privateKey := new(ecdsa.PrivateKey)
-	privateKey.PublicKey.X = &p[0]
-	privateKey.PublicKey.Y = &p[1]
-	privateKey.D = &p[2]
-
-	fmt.Println(&p[0])
-	fmt.Println(&p[1])
-
-	return privateKey, nil
 }
 
 // TestVerifyReadability ...
@@ -537,10 +510,10 @@ func TestSignandVerifyHuman(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+	t.Logf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
 	valid := Key.Verify(hash[:], sig)
-	fmt.Println("verified:", valid)
+	t.Log("verified: ", valid)
 }
 
 func TestSignAndVerify(t *testing.T) {
@@ -551,10 +524,10 @@ func TestSignAndVerify(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Printf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
+	t.Logf("signature: (r=0x%x, s=0x%x)\n", sig.R, sig.S)
 
 	valid := Key.Verify(hashed[:], sig)
-	fmt.Println("verified:", valid)
+	t.Log("verified: ", valid)
 
 	if !valid {
 		t.Fail()

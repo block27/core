@@ -46,7 +46,7 @@ func TestNewEDDSABlank(t *testing.T) {
 		t.Fail()
 	}
 
-	assertStructNilness(t, k)
+	AssertStructNilness(t, k)
 }
 
 func TestNewEDDSA(t *testing.T) {
@@ -55,7 +55,7 @@ func TestNewEDDSA(t *testing.T) {
 		t.Fail()
 	}
 
-	assertStructCorrectness(t, k)
+	AssertStructCorrectness(t, k)
 }
 
 func TestGetECDSA(t *testing.T) {
@@ -64,7 +64,7 @@ func TestGetECDSA(t *testing.T) {
 		t.Fail()
 	}
 
-	assertStructCorrectness(t, k)
+	AssertStructCorrectness(t, k)
 }
 
 func TestListECDSA(t *testing.T) {
@@ -77,7 +77,7 @@ func TestListECDSA(t *testing.T) {
 		t.Fatal("0 keys returned, should be < 1")
 	}
 
-	assertStructCorrectness(t, keys[0])
+	AssertStructCorrectness(t, keys[0])
 }
 
 // TestVerifyReadability ...
@@ -89,14 +89,14 @@ func TestVerifyReadability(t *testing.T) {
 		t.Fail()
 	}
 
-	assertStructCorrectness(t, newKey)
+	AssertStructCorrectness(t, newKey)
 
 	getKey, e := GetEDDSA(Config, newKey.FilePointer())
 	if e != nil {
 		t.Fail()
 	}
 
-	assertStructCorrectness(t, getKey)
+	AssertStructCorrectness(t, getKey)
 
 	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
 	t.Logf("Path reference: %s\n", path)
@@ -186,39 +186,4 @@ func TestEdDSAOps(t *testing.T) {
 	dhPrivKey := privKey.ToECDH()
 	dhPubKey := privKey.PublicKey().ToECDH()
 	assert.True(dhPrivKey.PublicKey().Equal(dhPubKey), "ToECDH() basic sanity")
-}
-
-func assertStructCorrectness(t *testing.T, k KeyAPI) {
-	t.Helper()
-
-	assert.NotNil(t, k.Struct().GID)
-	assert.NotNil(t, k.Struct().Name)
-	assert.NotNil(t, k.Struct().Slug)
-	assert.NotNil(t, k.Struct().FingerprintMD5)
-	assert.NotNil(t, k.Struct().FingerprintSHA)
-
-	assert.NotNil(t, k.Struct().PrivatePemPath)
-	assert.NotNil(t, k.Struct().PrivateKeyB64)
-	assert.NotNil(t, k.Struct().PublicKeyB64)
-	assert.NotNil(t, k.Struct().PrivateKeyPath)
-	assert.NotNil(t, k.Struct().PublicKeyPath)
-
-	assert.Equal(t, k.Struct().Status, "active")
-	assert.Equal(t, k.Struct().KeyType, "eddsa.PrivateKey <==> ed25519")
-}
-
-func assertStructNilness(t *testing.T, k KeyAPI) {
-	assert.Equal(t, k.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
-	assert.Equal(t, k.Struct().Name, "")
-	assert.Equal(t, k.Struct().Slug, "")
-	assert.Equal(t, k.Struct().Status, "")
-	assert.Equal(t, k.Struct().KeyType, "")
-	assert.Equal(t, k.Struct().FingerprintMD5, "")
-	assert.Equal(t, k.Struct().FingerprintSHA, "")
-
-	assert.Equal(t, k.Struct().PrivatePemPath, "")
-	assert.Equal(t, k.Struct().PrivateKeyB64, "")
-	assert.Equal(t, k.Struct().PublicKeyB64, "")
-	assert.Equal(t, k.Struct().PrivateKeyPath, "")
-	assert.Equal(t, k.Struct().PublicKeyPath, "")
 }

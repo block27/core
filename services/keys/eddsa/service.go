@@ -355,21 +355,9 @@ var errInvalidKey = errors.New("eddsa: invalid key")
 
 // -----------------------------------------------------------------------------
 
-// InternalPtr returns a pointer to the internal (`golang.org/x/crypto/ed25519`)
-// data structure.  Most people should not use this.
-func (k *publicKey) InternalPtr() *ed25519.PublicKey {
-	return &k.pubKey
-}
-
 // Bytes returns the raw public key.
 func (k *publicKey) Bytes() []byte {
 	return k.pubKey
-}
-
-// Identity returns the key's identity, in this case it's our
-// public key in bytes.
-func (k *publicKey) Identity() []byte {
-	return k.Bytes()
 }
 
 // ByteArray returns the raw public key as an array suitable for use as a map
@@ -467,16 +455,7 @@ func (k *publicKey) Verify(sig, msg []byte) bool {
 	return ed25519.Verify(k.pubKey, msg, sig)
 }
 
-// String returns the public key as a base64 encoded string.
-func (k *publicKey) String() string {
-	return k.b64String
-}
-
 func (k *publicKey) rebuildB64String() {
-	k.b64String = base64.StdEncoding.EncodeToString(k.Bytes())
-}
-
-func (k *privateKey) rebuildB64String() {
 	k.b64String = base64.StdEncoding.EncodeToString(k.Bytes())
 }
 
@@ -489,6 +468,10 @@ func (k *publicKey) Equal(cmp *publicKey) bool {
 // data structure.  Most people should not use this.
 func (k *privateKey) InternalPtr() *ed25519.PrivateKey {
 	return &k.privKey
+}
+
+func (k *privateKey) rebuildB64String() {
+	k.b64String = base64.StdEncoding.EncodeToString(k.Bytes())
 }
 
 // FromBytes deserializes the byte slice b into the PrivateKey.
