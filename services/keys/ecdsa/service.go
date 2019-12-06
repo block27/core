@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"sort"
 	"sync"
 	"time"
 
@@ -168,6 +169,10 @@ func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Before(files[j].ModTime())
+	})
 
 	var keys []KeyAPI
 
@@ -541,6 +546,10 @@ func PrintKeysTW(keys []KeyAPI) {
 				helpers.RFgB(f.Struct().KeyType),
 			},
 			{
+				"Created",
+				f.Struct().CreatedAt,
+			},
+			{
 				"PrivateKey",
 				pr,
 			},
@@ -555,10 +564,6 @@ func PrintKeysTW(keys []KeyAPI) {
 			{
 				"SHA256",
 				f.Struct().FingerprintSHA,
-			},
-			{
-				"Created",
-				f.Struct().CreatedAt,
 			},
 			{
 				"SHA256 Visual",

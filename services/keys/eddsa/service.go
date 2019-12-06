@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -162,6 +163,10 @@ func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Before(files[j].ModTime())
+	})
 
 	var keys []KeyAPI
 
