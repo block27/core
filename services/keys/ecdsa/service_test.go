@@ -18,6 +18,8 @@ import (
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
+
+	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
 )
 
 var Config config.Reader
@@ -213,6 +215,7 @@ func DecodeECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	privateKey := new(ecdsa.PrivateKey)
 	privateKey.PublicKey.X = &p[0]
 	privateKey.PublicKey.Y = &p[1]
@@ -220,6 +223,7 @@ func DecodeECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 
 	fmt.Println(&p[0])
 	fmt.Println(&p[1])
+
 	return privateKey, nil
 }
 
@@ -248,32 +252,50 @@ func TestVerifyReadability(t *testing.T) {
 
 	// Test PrivateKey
 	if !testEq(pri.D.Bytes(), private.D.Bytes()) {
-		t.Fail()
+		t.Fatal("pri(D).Bytes: did not match private")
 	}
 
 	if !testEq(pri.X.Bytes(), private.X.Bytes()) {
-		t.Fail()
+		t.Fatal("pri(X).Bytes: did not match private")
 	}
 
 	if !testEq(pri.Y.Bytes(), private.Y.Bytes()) {
-		t.Fail()
+		t.Fatal("pri(Y).Bytes: did not match private")
 	}
 
 	// Test PublicKey
 	if !testEq(pri.PublicKey.X.Bytes(), private.PublicKey.X.Bytes()) {
-		t.Fail()
+		t.Fatal("pub(X).Bytes: did not match private.PublicKey")
 	}
 
 	if !testEq(pri.PublicKey.Y.Bytes(), private.PublicKey.Y.Bytes()) {
-		t.Fail()
+		t.Fatal("pub(Y).Bytes: did not match private.PublicKey")
 	}
 
 	if pri.Params().BitSize != 256 {
-		t.Fail()
+		t.Fatal("pri: bitsize did not match")
 	}
 
 	if private.Params().BitSize != 256 {
-		t.Fail()
+		t.Fatal("private: bitsize did not match")
+	}
+
+	pemKey1, pemPub1, pemErr1 := enc.Encode(pri, &pri.PublicKey)
+	if pemErr1 != nil {
+		t.Fatal("Failed: enc.Encode(1)")
+	}
+
+	pemKey2, pemPub2, pemErr2 := enc.Encode(private, &private.PublicKey)
+	if pemErr2 != nil {
+		t.Fatal("Failed: enc.Encode(2)")
+	}
+
+	if pemKey1 != pemKey2 {
+		t.Fatal("pemKey1 != pemKey2")
+	}
+
+	if pemPub1 != pemPub2 {
+		t.Fatal("pemPub1 != pemPub2")
 	}
 }
 
@@ -541,7 +563,43 @@ func TestMarshall(t *testing.T) {
 }
 
 func TestUnmarshall(t *testing.T) {
-	t.Skip()
+	// Invalid
+	_, err := Key.Unmarshall("BNT+QMkvQZwszvyXMyk#WH6rj46AMEWRreKDK7W4p5yM2kxvN")
+	if err == nil {
+		t.Fatal("unmarshall with invalid data did not fail")
+	}
+
+	k, e := GetECDSA(Config, Key.FilePointer())
+	if e != nil {
+		t.Fail()
+	}
+
+	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), k.FilePointer())
+	obPa := fmt.Sprintf("%s/obj.bin", path)
+
+	objBytes, objErr := helpers.ReadBinary(obPa)
+	if objErr != nil {
+		t.Fatal(objErr)
+	}
+
+	unmarshalled, err := k.Unmarshall(string(objBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyPri, keyErr := k.getPrivateKey()
+	if keyErr != nil {
+		t.Fatal(keyErr)
+	}
+
+	unmPri, unmErr := unmarshalled.getPrivateKey()
+	if unmErr != nil {
+		t.Fatal(unmErr)
+	}
+
+	if keyPri.D.BitLen() != unmPri.D.BitLen() {
+		t.Fatal("keyPri.D.BitLen() != unmPri.D.BitLen()")
+	}
 }
 
 func TestGetPrivateKey(t *testing.T) {

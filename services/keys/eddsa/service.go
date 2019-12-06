@@ -108,6 +108,10 @@ func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 	// // Write the entire key object to FS
 	key.writeToFS(c, &pri, &pub)
 
+
+	fmt.Println(&pri)
+	fmt.Println(&pub)
+
 	return key, nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"os/exec"
 	"os/user"
@@ -91,6 +90,56 @@ func NewECDSABlank(c config.Reader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
+// NewECDSA is the main factory method for creating the ECDSA key. Quite
+// complicated but what happens here is complete key generation using our
+// cyrpto/rand lib
+func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
+	// Validate the type of curve passed
+	ec, ty, err := getCurve(curve)
+	if err != nil {
+		return nil,  err
+	}
+
+	// Generate the private key with our own io.Reader
+	pri, err := ecdsa.GenerateKey(ec, crypto.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Grab the public key
+	pub := &pri.PublicKey
+
+	// PEM #1 - encoding
+	pemKey, pemPub, perr := enc.Encode(pri, pub)
+	if perr != nil {
+		return  nil, perr
+	}
+
+	// Create the key struct object
+	key := &key{
+		GID:            api.GenerateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
+		Status:         api.StatusActive,
+		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
+		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
+		FingerprintMD5: enc.FingerprintMD5(pub),
+		FingerprintSHA: enc.FingerprintSHA256(pub),
+		CreatedAt:      time.Now(),
+	}
+
+	// Write the entire key object to FS
+	if err := key.writeToFS(c, pri, pub); err != nil {
+		return nil, err
+	}
+
+	key.privateKey = pri
+	key.publicKey = pub
+
+	return key, nil
+}
+
 // ImportPublicECDSA imports an existing ECDSA key into a KeyAPI object for
 // use in the Service API. Since you are importing a public Key, this will be
 // an incomplete Key object.
@@ -134,59 +183,6 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 
 	// Write the entire key object to FS
 	if err := key.writeToFS(c, nil, pub); err != nil {
-		return nil, err
-	}
-
-	return key, nil
-}
-
-// NewECDSA is the main factory method for creating the ECDSA key. Quite
-// complicated but what happens here is complete key generation using our
-// cyrpto/rand lib
-func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
-	// Validate the type of curve passed
-	ec, ty, err := getCurve(curve)
-	if err != nil {
-		return nil,  err
-	}
-
-	// Generate the private key with our own io.Reader
-	pri, err := ecdsa.GenerateKey(ec, crypto.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	// Grab the public key
-	pub := &pri.PublicKey
-
-	// PEM #1 - encoding
-	pemKey, pemPub, perr := enc.Encode(pri, pub)
-	if perr != nil {
-		return  nil, perr
-	}
-
-	// fmt.Printf("pri: \n%s\n", pri)
-	// fmt.Printf("pub: \n%s\n", pub)
-	//
-	// fmt.Printf("pemKey: \n%s\n", pemKey)
-	// fmt.Printf("pemPub: \n%s\n", pemPub)
-
-	// Create the key struct object
-	key := &key{
-		GID:            api.GenerateUUID(),
-		Name:           name,
-		Slug:           helpers.NewHaikunator().Haikunate(),
-		KeyType:        fmt.Sprintf("ecdsa.PrivateKey <==> %s", ty),
-		Status:         api.StatusActive,
-		PublicKeyB64:   base64.StdEncoding.EncodeToString([]byte(pemPub)),
-		PrivateKeyB64:  base64.StdEncoding.EncodeToString([]byte(pemKey)),
-		FingerprintMD5: enc.FingerprintMD5(pub),
-		FingerprintSHA: enc.FingerprintSHA256(pub),
-		CreatedAt:      time.Now(),
-	}
-
-	// Write the entire key object to FS
-	if err := key.writeToFS(c, pri, pub); err != nil {
 		return nil, err
 	}
 
@@ -342,11 +338,6 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 			return err
 		}
 
-		// pubBytes, pubErr := x509.Marsh
-		// if pubErr != nil {
-		// 	return pubErr
-		// }
-
 		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 		if err != nil {
 		return err
@@ -393,26 +384,6 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 	}
 
 	return nil
-}
-
-func encodeECDSAPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode([]big.Int{*key.X, *key.Y, *key.D})
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func encodeECDSAPublicKey(key *ecdsa.PublicKey) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode([]big.Int{*key.X, *key.Y})
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 // getCurve checks the string param matched and should return a valid ec curve

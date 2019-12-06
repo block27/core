@@ -28,21 +28,6 @@ func main() {
 		panic(err)
 	}
 
-	// var p []big.Int
-	//
-	// buf := bytes.NewBuffer(data)
-	// dec := gob.NewDecoder(buf)
-	// err := dec.Decode(&p)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//
-	// privateKey := new(ecdsa.PrivateKey)
-	// privateKey.PublicKey.Curve = elliptic.P256()
-	// privateKey.PublicKey.X = &p[0]
-	// privateKey.PublicKey.Y = &p[1]
-	// privateKey.D = &p[2]
-
 	fmt.Println(privateKey.PublicKey.Curve)
 	fmt.Println(privateKey.PublicKey.X)
 	fmt.Println(privateKey.PublicKey.Y)
