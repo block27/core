@@ -16,7 +16,7 @@ import (
 	"github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/test"
 
-	enc "github.com/amanelis/bespin/services/keys/ecdsa/encodings"
+	enc "github.com/amanelis/bespin/services/dsa/ecdsa/encodings"
 )
 
 var Config config.Reader

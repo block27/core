@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	h "github.com/amanelis/bespin/helpers"
-	"github.com/amanelis/bespin/services/keys/ecdsa"
-	"github.com/amanelis/bespin/services/keys/ecdsa/signature"
+	"github.com/amanelis/bespin/services/dsa/ecdsa"
+	"github.com/amanelis/bespin/services/dsa/ecdsa/signature"
 )
 
 var (

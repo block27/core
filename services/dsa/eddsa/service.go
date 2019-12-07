@@ -23,10 +23,10 @@ import (
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
-	api "github.com/amanelis/bespin/services/keys/api"
-	"github.com/amanelis/bespin/services/keys/eddsa/ecdh"
-	enc "github.com/amanelis/bespin/services/keys/eddsa/encodings"
-	eer "github.com/amanelis/bespin/services/keys/errors"
+	api "github.com/amanelis/bespin/services/dsa/api"
+	ecdh "github.com/amanelis/bespin/services/dsa/eddsa/ecdh"
+	enc "github.com/amanelis/bespin/services/dsa/eddsa/encodings"
+	eer "github.com/amanelis/bespin/services/dsa/errors"
 	"github.com/amanelis/bespin/utils"
 )
 
@@ -72,8 +72,8 @@ type key struct {
 	FingerprintSHA string // Real fingerprint in  SHA256  of the key
 
 	PrivatePemPath string // Pem PKS8 format of the private key
-	PrivateKeyPath string // ECDSA path for private key
-	PublicKeyPath  string // ECDSA path for public key
+	PrivateKeyPath string // EDDSA path for private key
+	PublicKeyPath  string // EDDSA path for public key
 
 	PrivateKeyB64 string // B64 of private key
 	PublicKeyB64  string // B64 of public key
@@ -94,7 +94,7 @@ func NewEDDSABlank(c config.Reader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
-// NewEDDSA - main factory method for creating the ECDSA key.  Quite complicated
+// NewEDDSA - main factory method for creating the EDDSA key.  Quite complicated
 // but what happens here is complete key generation using our cyrpto/rand lib
 //
 func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
@@ -156,9 +156,9 @@ func GetEDDSA(c config.Reader, fp string) (KeyAPI, error) {
 	return obj, nil
 }
 
-// ListECDSA returns a list of active keys stored on the local filesystem. Of
+// ListEDDSA returns a list of active keys stored on the local filesystem. Of
 // which are all encrypted via AES from the hardware block
-func ListECDSA(c config.Reader) ([]KeyAPI, error) {
+func ListEDDSA(c config.Reader) ([]KeyAPI, error) {
 	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
 	if err != nil {
 		return nil, err

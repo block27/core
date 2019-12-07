@@ -58,7 +58,7 @@ func TestNewEDDSA(t *testing.T) {
 	AssertStructCorrectness(t, k)
 }
 
-func TestGetECDSA(t *testing.T) {
+func TestGetEDDSA(t *testing.T) {
 	k, err := GetEDDSA(Config, Key.FilePointer())
 	if err != nil {
 		t.Fail()
@@ -67,8 +67,8 @@ func TestGetECDSA(t *testing.T) {
 	AssertStructCorrectness(t, k)
 }
 
-func TestListECDSA(t *testing.T) {
-	keys, err := ListECDSA(Config)
+func TestListEDDSA(t *testing.T) {
+	keys, err := ListEDDSA(Config)
 	if err != nil {
 		t.Fatal(err)
 	}
