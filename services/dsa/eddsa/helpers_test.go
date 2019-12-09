@@ -6,6 +6,7 @@ import (
 
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/helpers"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,8 +26,8 @@ func AssertStructCorrectness(t *testing.T, k KeyAPI) {
 	assert.NotNil(t, k.Struct().PrivateKeyPath)
 	assert.NotNil(t, k.Struct().PublicKeyPath)
 
-	assert.Equal(t, k.Struct().Status, "active")
-	assert.Equal(t, k.Struct().KeyType, "eddsa.PrivateKey <==> ed25519")
+	assert.Equal(t, "active", k.Struct().Status)
+	assert.Equal(t, "eddsa.PrivateKey <==> ed25519", k.Struct().KeyType)
 }
 
 // AssertStructNilness ...
@@ -57,6 +58,8 @@ func CheckFullKeyFileObjects(t *testing.T, c config.Reader, k KeyAPI, f string) 
 }
 
 func checkKeyFileObjects(t *testing.T, f string, p string) {
+	t.Helper()
+
 	paths := []string{
 		fmt.Sprintf("%s/%s", p, "obj.bin"),
 		fmt.Sprintf("%s/%s", p, "public.key"),

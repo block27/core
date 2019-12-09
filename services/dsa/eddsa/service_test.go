@@ -77,7 +77,12 @@ func TestListEDDSA(t *testing.T) {
 		t.Fatal("0 keys returned, should be < 1")
 	}
 
-	AssertStructCorrectness(t, keys[0])
+	for _, k := range keys {
+		if k.FilePointer() == Key.FilePointer() {
+			AssertStructCorrectness(t, k)
+			break
+		}
+	}
 }
 
 // TestVerifyReadability ...

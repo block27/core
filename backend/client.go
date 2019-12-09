@@ -21,7 +21,8 @@ import (
 var (
 	// AESDevice - crypto key/iv provider.
 	//
-	AESDevice = "/dev/tty.usbmodem20021401"
+	AESDeviceMac = "/dev/tty.usbmodem20021401"
+	AESDeviceArm = "/dev/ttyACM0"
 )
 
 // Backend - main struct for the entire application configuration
@@ -184,7 +185,13 @@ func (b *Backend) LocateDevice() (string, error) {
 	}
 
 	for _, f := range data {
+		// MacOSX
 		if strings.Contains(f.Name(), "tty.usbmodem") {
+			return fmt.Sprintf("/dev/%s", f.Name()), nil
+		}
+
+		// ARM based OS
+		if strings.Contains(f.Name(), "ttyACM0") {
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 	}

@@ -77,13 +77,6 @@ type key struct {
 	PublicKeyB64  string // B64 of public key
 
 	CreatedAt time.Time
-
-	// Used as place holder converstions during Sign/Verify
-	// these should probably be set to nil after use as it's
-	// easy access to  the real  objects,  hence why they   aren't
-	// publically accessible.  taste it.
-	privateKey *ecdsa.PrivateKey
-	publicKey  *ecdsa.PublicKey
 }
 
 // NewECDSABlank simply returns a blank object of KeyAPI/key struct
@@ -134,9 +127,6 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	if err := key.writeToFS(c, pri, pub); err != nil {
 		return nil, err
 	}
-
-	key.privateKey = pri
-	key.publicKey = pub
 
 	return key, nil
 }
@@ -234,9 +224,6 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 	if err := key.writeToFS(c, nil, pub); err != nil {
 		return nil, err
 	}
-
-	key.privateKey = nil
-	key.publicKey = pub
 
 	return key, nil
 }

@@ -51,24 +51,12 @@ func init() {
 }
 
 func TestNewECDSABlank(t *testing.T) {
-	result, err := NewECDSABlank(Config)
+	k, err := NewECDSABlank(Config)
 	if err != nil {
 		t.Fail()
 	}
 
-	assert.Equal(t, result.Struct().GID.String(), "00000000-0000-0000-0000-000000000000")
-	assert.Equal(t, result.Struct().Name, "")
-	assert.Equal(t, result.Struct().Slug, "")
-	assert.Equal(t, result.Struct().Status, "")
-	assert.Equal(t, result.Struct().KeyType, "")
-	assert.Equal(t, result.Struct().FingerprintMD5, "")
-	assert.Equal(t, result.Struct().FingerprintSHA, "")
-
-	assert.Equal(t, result.Struct().PrivatePemPath, "")
-	assert.Equal(t, result.Struct().PrivateKeyB64, "")
-	assert.Equal(t, result.Struct().PublicKeyB64, "")
-	assert.Equal(t, result.Struct().PrivateKeyPath, "")
-	assert.Equal(t, result.Struct().PublicKeyPath, "")
+	AssertStructNilness(t, k)
 }
 
 func TestImportPublicECDSA256v1(t *testing.T) {
@@ -81,6 +69,8 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 	if e != nil {
 		t.Fail()
 	}
+
+	AssertStructCorrectness(t, k1, "PublicKey", "prime256v1")
 
 	if k1.Struct().Name != "prime256v1-name" {
 		t.Fail()
@@ -106,6 +96,8 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 	if e != nil {
 		t.Fail()
 	}
+
+	AssertStructCorrectness(t, k1, "PublicKey", "secp384r1")
 
 	if k1.Struct().Name != "secp384r1-name" {
 		t.Fail()
@@ -157,6 +149,8 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 		t.Fatal(e)
 	}
 
+	AssertStructCorrectness(t, k1, "PublicKey", "secp521r1")
+
 	if k1.Struct().Name != "secp521r1-name" {
 		t.Fatalf("k1.Struct().Name did not equal expected valud: %s", k1.Struct().Name)
 	}
@@ -184,6 +178,8 @@ func TestNewECDSA(t *testing.T) {
 		t.Fail()
 	}
 
+	AssertStructCorrectness(t, k, "PrivateKey", "prime256v1")
+
 	c := elliptic.P256()
 	p, e := k.getPrivateKey()
 	if e != nil {
@@ -209,6 +205,8 @@ func TestVerifyReadability(t *testing.T) {
 	if e != nil {
 		t.Fail()
 	}
+
+	AssertStructCorrectness(t, getKey, "PrivateKey", "prime256v1")
 
 	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
 	t.Logf("Path reference: %s\n", path)
@@ -460,24 +458,29 @@ func BenchmarkVerifyP521(b *testing.B) {
 }
 
 func TestGetECDSA(t *testing.T) {
-	result, err := GetECDSA(Config, Key.FilePointer())
+	k, err := GetECDSA(Config, Key.FilePointer())
 	if err != nil {
 		t.Fail()
 	}
 
-	assert.NotNil(t, result.Struct().GID)
-	assert.NotNil(t, result.Struct().FingerprintMD5)
-	assert.NotNil(t, result.Struct().FingerprintSHA)
+	AssertStructCorrectness(t, k, "PrivateKey", "prime256v1")
 }
 
 func TestListECDSA(t *testing.T) {
-	result, err := ListECDSA(Config)
+	keys, err := ListECDSA(Config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(result) == 0 {
+	if len(keys) == 0 {
 		t.Fatal("0 keys returned, should be < 1")
+	}
+
+	for _, k := range keys {
+		if k.FilePointer() == Key.FilePointer() {
+			AssertStructCorrectness(t, k, "PrivateKey", "prime256v1")
+			break
+		}
 	}
 }
 
