@@ -20,7 +20,7 @@ import (
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
-	api "github.com/amanelis/bespin/services/dsa/api"
+	api "github.com/amanelis/bespin/services/dsa"
 	enc "github.com/amanelis/bespin/services/dsa/ecdsa/encodings"
 	mar "github.com/amanelis/bespin/services/dsa/ecdsa/marshall"
 	sig "github.com/amanelis/bespin/services/dsa/ecdsa/signature"

@@ -23,8 +23,8 @@ import (
 	"github.com/amanelis/bespin/config"
 	"github.com/amanelis/bespin/crypto"
 	"github.com/amanelis/bespin/helpers"
-	api "github.com/amanelis/bespin/services/dsa/api"
-	ecdh "github.com/amanelis/bespin/services/dsa/eddsa/ecdh"
+	api "github.com/amanelis/bespin/services/dsa"
+	ecd "github.com/amanelis/bespin/services/dsa/eddsa/ecdh"
 	enc "github.com/amanelis/bespin/services/dsa/eddsa/encodings"
 	eer "github.com/amanelis/bespin/services/dsa/errors"
 	"github.com/amanelis/bespin/utils"
@@ -128,9 +128,6 @@ func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 	if err := key.writeToFS(c, k, &k.pubKey); err != nil {
 		return nil, err
 	}
-
-	key.privateKey = *k
-	key.publicKey = k.pubKey
 
 	return key, nil
 }
@@ -431,13 +428,13 @@ func (k *publicKey) ToPEMFile(f string) error {
 }
 
 // ToECDH converts the PublicKey to the corresponding ecdh.PublicKey.
-func (k *publicKey) ToECDH() *ecdh.PublicKey {
+func (k *publicKey) ToECDH() *ecd.PublicKey {
 	var dhBytes, dsaBytes [32]byte
 	copy(dsaBytes[:], k.Bytes())
 	defer utils.ExplicitBzero(dsaBytes[:])
 	extra25519.PublicKeyToCurve25519(&dhBytes, &dsaBytes)
 	defer utils.ExplicitBzero(dhBytes[:])
-	r := new(ecdh.PublicKey)
+	r := new(ecd.PublicKey)
 	r.FromBytes(dhBytes[:])
 	return r
 }
@@ -518,7 +515,7 @@ func (k *privateKey) KeyType() string {
 }
 
 // ToECDH converts the PrivateKey to the corresponding ecdh.PrivateKey.
-func (k *privateKey) ToECDH() *ecdh.PrivateKey {
+func (k *privateKey) ToECDH() *ecd.PrivateKey {
 	var dsaBytes [64]byte
 	defer utils.ExplicitBzero(dsaBytes[:])
 	copy(dsaBytes[:], k.Bytes())
@@ -527,7 +524,7 @@ func (k *privateKey) ToECDH() *ecdh.PrivateKey {
 	extra25519.PrivateKeyToCurve25519(&dhBytes, &dsaBytes)
 	defer utils.ExplicitBzero(dhBytes[:])
 
-	r := new(ecdh.PrivateKey)
+	r := new(ecd.PrivateKey)
 	r.FromBytes(dhBytes[:])
 	return r
 }
