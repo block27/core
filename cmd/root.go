@@ -36,19 +36,19 @@ func init() {
 
 	// root
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(keysCmd)
+	rootCmd.AddCommand(dsaCmd)
 	rootCmd.AddCommand(infoCmd)
 
 	// flags
 	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "dry, no commits to real data")
 
-	// keys
-	keysCmd.AddCommand(keysCreateCmd)
-	keysCmd.AddCommand(keysGetCmd)
-	keysCmd.AddCommand(keysListCmd)
-	keysCmd.AddCommand(keysSignCmd)
-	keysCmd.AddCommand(keysVerifyCmd)
-	keysCmd.AddCommand(keysImportPubCmd)
+	// dsa
+	dsaCmd.AddCommand(dsaCreateCmd)
+	dsaCmd.AddCommand(dsaGetCmd)
+	dsaCmd.AddCommand(dsaListCmd)
+	dsaCmd.AddCommand(dsaSignCmd)
+	dsaCmd.AddCommand(dsaVerifyCmd)
+	dsaCmd.AddCommand(dsaImportPubCmd)
 
 	// Fire post configuration
 	postConfig()

@@ -40,41 +40,41 @@ var (
 
 func init() {
 	// Create flags ...
-	keysCreateCmd.Flags().StringVarP(&createName,  "name", "n", "", "name required")
-	keysCreateCmd.Flags().StringVarP(&createType,  "type", "t", "ecdsa", "type")
-	keysCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "size")
-	keysCreateCmd.MarkFlagRequired("name")
-	keysCreateCmd.MarkFlagRequired("type")
+	dsaCreateCmd.Flags().StringVarP(&createName,  "name", "n", "", "name required")
+	dsaCreateCmd.Flags().StringVarP(&createType,  "type", "t", "ecdsa", "type")
+	dsaCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "size")
+	dsaCreateCmd.MarkFlagRequired("name")
+	dsaCreateCmd.MarkFlagRequired("type")
 
 	// Get flags ...
-	keysGetCmd.Flags().StringVarP(&getIdentifier, "identifier", "i", "", "identifier required")
-	keysGetCmd.MarkFlagRequired("identifier")
+	dsaGetCmd.Flags().StringVarP(&getIdentifier, "identifier", "i", "", "identifier required")
+	dsaGetCmd.MarkFlagRequired("identifier")
 
 	// List flags ...
 	// ...
 
 	// Sign flags ...
-	keysSignCmd.Flags().StringVarP(&signIdentifier, "identifier", "i", "", "identifier required")
-	keysSignCmd.Flags().StringVarP(&signFilePath, "file", "f", "", "file required")
-	keysSignCmd.MarkFlagRequired("identifier")
-	keysSignCmd.MarkFlagRequired("file")
+	dsaSignCmd.Flags().StringVarP(&signIdentifier, "identifier", "i", "", "identifier required")
+	dsaSignCmd.Flags().StringVarP(&signFilePath, "file", "f", "", "file required")
+	dsaSignCmd.MarkFlagRequired("identifier")
+	dsaSignCmd.MarkFlagRequired("file")
 
 	// Verify flags ...
-	keysVerifyCmd.Flags().StringVarP(&verifyIdentifier, "identifier", "i", "", "identifier required")
-	keysVerifyCmd.Flags().StringVarP(&verifyFilePath, "file", "f", "", "file required")
-	keysVerifyCmd.Flags().StringVarP(&verifySignaturePath, "signature", "s", "", "signature required")
-	keysVerifyCmd.MarkFlagRequired("identifier")
-	keysVerifyCmd.MarkFlagRequired("file")
-	keysVerifyCmd.MarkFlagRequired("signature")
+	dsaVerifyCmd.Flags().StringVarP(&verifyIdentifier, "identifier", "i", "", "identifier required")
+	dsaVerifyCmd.Flags().StringVarP(&verifyFilePath, "file", "f", "", "file required")
+	dsaVerifyCmd.Flags().StringVarP(&verifySignaturePath, "signature", "s", "", "signature required")
+	dsaVerifyCmd.MarkFlagRequired("identifier")
+	dsaVerifyCmd.MarkFlagRequired("file")
+	dsaVerifyCmd.MarkFlagRequired("signature")
 
 	// ImportPub flags  ...
-	keysImportPubCmd.Flags().StringVarP(&importPubName, "name", "n", "", "name required")
-	keysImportPubCmd.Flags().StringVarP(&importPubCurve, "curve", "c", "", "curve required")
-	keysImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "p", "", "publicKey required")
+	dsaImportPubCmd.Flags().StringVarP(&importPubName, "name", "n", "", "name required")
+	dsaImportPubCmd.Flags().StringVarP(&importPubCurve, "curve", "c", "", "curve required")
+	dsaImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "p", "", "publicKey required")
 }
 
-var keysCmd = &cobra.Command{
-	Use: "keys",
+var dsaCmd = &cobra.Command{
+	Use: "dsa",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf(fmt.Sprintf("%s", h.RFgB("requires an argument")))
@@ -85,7 +85,7 @@ var keysCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {},
 }
 
-var keysCreateCmd = &cobra.Command{
+var dsaCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new key pair",
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -101,7 +101,7 @@ var keysCreateCmd = &cobra.Command{
 	},
 }
 
-var keysGetCmd = &cobra.Command{
+var dsaGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get key by identifier",
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -117,7 +117,7 @@ var keysGetCmd = &cobra.Command{
 	},
 }
 
-var keysListCmd = &cobra.Command{
+var dsaListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all keys",
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -137,7 +137,7 @@ var keysListCmd = &cobra.Command{
 	},
 }
 
-var keysSignCmd = &cobra.Command{
+var dsaSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with Key",
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -194,7 +194,7 @@ var keysSignCmd = &cobra.Command{
 	},
 }
 
-var keysVerifyCmd = &cobra.Command{
+var dsaVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -224,7 +224,7 @@ var keysVerifyCmd = &cobra.Command{
 	},
 }
 
-var keysImportPubCmd = &cobra.Command{
+var dsaImportPubCmd = &cobra.Command{
 	Use:   "importPub",
 	Short: "Import a public key",
 	PreRun: func(cmd *cobra.Command, args []string) {
