@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -48,8 +49,8 @@ type KeyAPI interface {
 	Verify([]byte, *sig.Signature) bool
 }
 
-// key struct is the main type and placeholder for private keys on the system.
-// These should be persisted to a flat file database storage.
+// key struct is the main type and placeholder for private keys on the system. These
+// should be persisted to a flat file database storage.
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
 	GID  guuid.UUID // guuid for crypto identification
@@ -86,7 +87,7 @@ func NewECDSABlank(c config.Reader) (KeyAPI, error) {
 
 // NewECDSA is the main factory method for creating the ECDSA key. Quite
 // complicated but what happens here is complete key generation using our
-// cyrpto/rand lib
+// cyrpto/rand lib, and then writes encrypted key to FS
 func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 	// Validate the type of curve passed
 	ec, ty, err := getCurve(curve)
@@ -228,75 +229,7 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 	return key, nil
 }
 
-// FilePointer returns a string that will represent the path the key can be
-// written to on the file system
-func (k *key) FilePointer() string {
-	return k.GID.String()
-}
-
-// Marshall ...
-func (k *key) Marshall() (string, error) {
-	d, err := keyToGOB64(k)
-	if err != nil {
-		return "", err
-	}
-
-	return d, nil
-}
-
-// Unmarshall ...
-func (k *key) Unmarshall(obj string) (KeyAPI, error) {
-	d, err := keyFromGOB64(obj)
-	if err != nil {
-		return (KeyAPI)(nil), err
-	}
-
-	return d, nil
-}
-
-// Struct returns the full object for access to non exported fields, not sure
-// about this, but fine for now... think of a better way to implement such need,
-// perhaps just using attribute getters will suffice...
-func (k *key) Struct() *key {
-	return k
-}
-
-// Sign signs a hash (which should be the result of hashing a larger message)
-// using the private key, priv. If the hash is longer than the bit-length of the
-// private key's curve order, the hash will be truncated to that length.  It
-// returns the signature as a pair of integers{R,S}. The security of the private
-// key depends on the entropy of rand / which in this case we implement our own
-func (k *key) Sign(data []byte) (*sig.Signature, error) {
-	pri, err := k.getPrivateKey()
-	if err != nil {
-		return (*sig.Signature)(nil), err
-	}
-
-	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
-	if err != nil {
-		return (*sig.Signature)(nil), err
-	}
-
-	return &sig.Signature{
-		// MD5: md5.Sum(data),
-		// SHA: sha256.Sum256(data),
-		R: r,
-		S: s,
-	}, nil
-}
-
-// Verify verifies the signature in r, s of hash using the public key, pub. Its
-// return value records whether the signature is valid.
-func (k *key) Verify(hash []byte, sig *sig.Signature) bool {
-	pub, err := k.getPublicKey()
-	if err != nil {
-		panic(err)
-	}
-
-	return ecdsa.Verify(pub, hash, sig.R, sig.S)
-}
-
-// writeToFS
+// writeToFS publishes the keys to the filesystem
 func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
 	// Create the keys root directory based on it's FilePointer method
 	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
@@ -381,6 +314,74 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 	return nil
 }
 
+// FilePointer returns a string that will represent the path the key can be
+// written to on the file system
+func (k *key) FilePointer() string {
+	return k.GID.String()
+}
+
+// Marshall dumps the entire object to Base64 encoding
+func (k *key) Marshall() (string, error) {
+	d, err := keyToGOB64(k)
+	if err != nil {
+		return "", err
+	}
+
+	return d, nil
+}
+
+// Unmarshall returns a Base64 string to a KeyAPI object
+func (k *key) Unmarshall(obj string) (KeyAPI, error) {
+	d, err := keyFromGOB64(obj)
+	if err != nil {
+		return (KeyAPI)(nil), err
+	}
+
+	return d, nil
+}
+
+// Struct returns the full object for access to non exported fields, not sure
+// about this, but fine for now... think of a better way to implement such need,
+// perhaps just using attribute getters will suffice...
+func (k *key) Struct() *key {
+	return k
+}
+
+// Sign signs a hash (which should be the result of hashing a larger message)
+// using the private key, priv. If the hash is longer than the bit-length of the
+// private key's curve order, the hash will be truncated to that length.  It
+// returns the signature as a pair of integers{R,S}. The security of the private
+// key depends on the entropy of rand / which in this case we implement our own
+func (k *key) Sign(data []byte) (*sig.Signature, error) {
+	pri, err := k.getPrivateKey()
+	if err != nil {
+		return (*sig.Signature)(nil), err
+	}
+
+	r, s, err := ecdsa.Sign(crypto.Reader, pri, data)
+	if err != nil {
+		return (*sig.Signature)(nil), err
+	}
+
+	return &sig.Signature{
+		// MD5: md5.Sum(data),
+		// SHA: sha256.Sum256(data),
+		R: r,
+		S: s,
+	}, nil
+}
+
+// Verify verifies the signature in r, s of hash using the public key, pub. Its
+// return value records whether the signature is valid.
+func (k *key) Verify(hash []byte, sig *sig.Signature) bool {
+	pub, err := k.getPublicKey()
+	if err != nil {
+		panic(err)
+	}
+
+	return ecdsa.Verify(pub, hash, sig.R, sig.S)
+}
+
 // getCurve checks the string param matched and should return a valid ec curve
 func getCurve(curve string) (elliptic.Curve, string, error) {
 	switch curve {
@@ -397,15 +398,23 @@ func getCurve(curve string) (elliptic.Curve, string, error) {
 	}
 }
 
-// getArtSignature ...
+// getArtSignature converts the public key to ssh art in sha256
 func (k *key) getArtSignature() string {
 	usr, err := user.Current()
 	if err != nil {
 		return "--- path err ---"
 	}
 
+	var pyPath string
+
+	if runtime.GOOS == "darwin" {
+		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
+	} else if runtime.GOOS == "linux" {
+		pyPath = "/usr/local/bin/python"
+	}
+
 	cmd := exec.Command(
-		fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir),
+		pyPath,
 		"tmp/drunken_bishop.py",
 		"--mode",
 		"sha256",
@@ -428,7 +437,8 @@ func (k *key) getArtSignature() string {
 	return outStr
 }
 
-// getPrivateKey ...
+// getPrivateKey takes in the key's base64 encodings and converts to a valid
+// ecdsa.PrivateKey
 func (k *key) getPrivateKey() (*ecdsa.PrivateKey, error) {
 	by, err := base64.StdEncoding.DecodeString(k.PrivateKeyB64)
 	if err != nil {
@@ -444,7 +454,8 @@ func (k *key) getPrivateKey() (*ecdsa.PrivateKey, error) {
 	return tempKey, nil
 }
 
-// getPublicKey ...
+// getPublicKey takes in the key's base64 encodings and converts to a valid
+// ecdsa.PublicKey
 func (k *key) getPublicKey() (*ecdsa.PublicKey, error) {
 	by, err := base64.StdEncoding.DecodeString(k.PublicKeyB64)
 	if err != nil {
@@ -578,7 +589,7 @@ func PrintKeysTW(keys []KeyAPI) {
 	}
 }
 
-// PrintKeyTW  ...
+// PrintKeyTW takes an array of keys and runs them through prettyPrint function
 func PrintKeyTW(k *key) {
 	PrintKeysTW([]KeyAPI{k})
 }

@@ -6,7 +6,7 @@ import (
 
 const (
 	// StatusActive is for active and currently used keys
-	StatusActive   = "active"
+	StatusActive = "active"
 
 	// StatusArchived is for keys that are "soft" deleted and no longer in use
 	StatusArchived = "archive"
@@ -16,13 +16,3 @@ const (
 func GenerateUUID() guuid.UUID {
 	return guuid.New()
 }
-
-// WriteToFS ...
-// func WriteToFS(i interface{}) {
-// 	switch v := i.(type) {
-// 	case ecdsa.KeyAPI:
-// 		fmt.Println("ECDSA: ", v)
-// 	case eddsa.KeyAPI:
-// 		fmt.Println("EDDSA: ", v)
-// 	}
-// }

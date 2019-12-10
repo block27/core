@@ -1,4 +1,4 @@
-package keys
+package gcm
 
 import (
 	"bytes"
@@ -43,7 +43,7 @@ func TestEncryptDecryptGCM(t *testing.T) {
 		}
 
 		ciphertext[0] ^= 0xff
-		plaintext, err = Decrypt(ciphertext, tt.key)
+		_, err = Decrypt(ciphertext, tt.key)
 		if err == nil {
 			t.Errorf("gcmOpen should not have worked, but did")
 		}

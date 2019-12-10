@@ -30,7 +30,7 @@ import (
 	"github.com/amanelis/bespin/utils"
 )
 
-// KeyAPI - main api for defining Key behavior and functions
+// KeyAPI main api for defining Key behavior and functions
 type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
@@ -50,7 +50,7 @@ type privateKey struct {
 	b64String string
 }
 
-// key - struct, main type and placeholder for private keys on the system. These
+// key struct is the main type and placeholder for private keys on the system. These
 // should be persisted to a flat file database storage.
 type key struct {
 	sink sync.Mutex // mutex to allow clean concurrent access
@@ -88,15 +88,14 @@ type key struct {
 	publicKey  publicKey
 }
 
-// NewEDDSABlank - create a struct from a database object marshalled into obj
-//
+// NewEDDSABlank simply returns a blank object of KeyAPI/key struct
 func NewEDDSABlank(c config.Reader) (KeyAPI, error) {
 	return &key{}, nil
 }
 
-// NewEDDSA - main factory method for creating the EDDSA key.  Quite complicated
-// but what happens here is complete key generation using our cyrpto/rand lib
-//
+// NewEDDSA is the main factory method for creating the ECDSA key. Quite
+// complicated but what happens here is complete key generation using our
+// cyrpto/rand lib, and then writes encrypted key to FS
 func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 	pub, pri, err := ed25519.GenerateKey(crypto.Reader)
 	if err != nil {
@@ -249,21 +248,31 @@ func (k *key) writeToFS(c config.Reader, pri *privateKey, pub *publicKey) error 
 	return nil
 }
 
-// Struct - return the full object for access to non exported fields, not sure
+// FilePointer returns a string that will represent the path the key can be
+// written to on the file system
+func (k *key) FilePointer() string {
+	return k.GID.String()
+}
+
+// Marshall dumps the entire object to Base64 encoding
+func (k *key) Marshall() (string, error) {
+	return "", nil
+}
+
+// Unmarshall returns a Base64 string to a KeyAPI object
+func (k *key) Unmarshall(string) (KeyAPI, error) {
+	return nil, nil
+}
+
+// Struct returns the full object for access to non exported fields, not sure
 // about this, but fine for now... think of a better way to implement such need,
 // perhaps just using attribute getters will suffice...
 func (k *key) Struct() *key {
 	return k
 }
 
-// FilePointer - return a string that will represent the path the key can be
-// written to on the file system
-//
-func (k *key) FilePointer() string {
-	return k.GID.String()
-}
-
-// getPrivateKey ...
+// getPrivateKey takes in the key's base64 encodings and converts to a valid
+// eddsa.PrivateKey
 func (k *key) getPrivateKey() (*ed25519.PrivateKey, error) {
 	by, err := base64.StdEncoding.DecodeString(k.PrivateKeyB64)
 	if err != nil {
@@ -275,7 +284,8 @@ func (k *key) getPrivateKey() (*ed25519.PrivateKey, error) {
 	return &k.privateKey.privKey, nil
 }
 
-// getPublicKey ...
+// getPublicKey takes in the key's base64 encodings and converts to a valid
+// eddsa.PublicKey
 func (k *key) getPublicKey() (*ed25519.PublicKey, error) {
 	by, err := base64.StdEncoding.DecodeString(k.PublicKeyB64)
 	if err != nil {
@@ -287,17 +297,7 @@ func (k *key) getPublicKey() (*ed25519.PublicKey, error) {
 	return &k.publicKey.pubKey, nil
 }
 
-// Marshall ...
-func (k *key) Marshall() (string, error) {
-	return "", nil
-}
-
-// Unmarshall ...
-func (k *key) Unmarshall(string) (KeyAPI, error) {
-	return nil, nil
-}
-
-// keyToGOB64 - take a pointer to an existing key and return it's entire body
+// keyToGOB64 takes a pointer to an existing key and return it's entire body
 // object base64 encoded for storage.
 func keyToGOB64(k *key) (string, error) {
 	b := bytes.Buffer{}
@@ -310,7 +310,7 @@ func keyToGOB64(k *key) (string, error) {
 	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
-// keyFromGOB64 - take a base64 encoded string and convert that to an object. We
+// keyFromGOB64 takes a base64 encoded string and convert that to an object. We
 // need a way to handle updates here.
 func keyFromGOB64(str string) (*key, error) {
 	by, err := base64.StdEncoding.DecodeString(str)
