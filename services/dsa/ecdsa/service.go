@@ -410,7 +410,7 @@ func (k *key) getArtSignature() string {
 	if runtime.GOOS == "darwin" {
 		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
 	} else if runtime.GOOS == "linux" {
-		pyPath = "/usr/local/bin/python"
+		pyPath = "/usr/bin/python"
 	}
 
 	cmd := exec.Command(
