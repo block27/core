@@ -190,8 +190,13 @@ func (b *Backend) LocateDevice() (string, error) {
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 
-		// ARM based OS
+		// linux based OS
 		if strings.Contains(f.Name(), "ttyACM0") {
+			return fmt.Sprintf("/dev/%s", f.Name()), nil
+		}
+
+		// arm based OS
+		if strings.Contains(f.Name(), "ttyGS0") {
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 	}
