@@ -196,7 +196,7 @@ func (b *Backend) LocateDevice() (string, error) {
 		}
 
 		// arm based OS
-		if strings.Contains(f.Name(), "ttyGS0") {
+		if strings.Contains(f.Name(), "ttyS1") {
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 	}
