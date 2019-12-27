@@ -187,16 +187,19 @@ func (b *Backend) LocateDevice() (string, error) {
 	for _, f := range data {
 		// MacOSX
 		if strings.Contains(f.Name(), "tty.usbmodem") {
+			fmt.Printf("trying: tty.usbmodem\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 
 		// linux based OS
 		if strings.Contains(f.Name(), "ttyACM0") {
+			fmt.Printf("trying: ttyACM0\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 
 		// arm based OS
 		if strings.Contains(f.Name(), "ttyS1") {
+			fmt.Printf("trying: ttyS1\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 	}
