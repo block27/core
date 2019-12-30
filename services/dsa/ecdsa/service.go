@@ -171,7 +171,8 @@ func ListECDSA(c config.Reader) ([]KeyAPI, error) {
 		_key, _err := GetECDSA(c, f.Name())
 
 		if _err != nil {
-			return nil, _err
+			// return nil, _err
+			continue
 		}
 
 		keys = append(keys, _key)

@@ -40,9 +40,14 @@ func init() {
 	rootCmd.AddCommand(infoCmd)
 
 	// flags
-	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "dry, no commits to real data")
+	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false,
+		"dry, no commits to real data")
 
 	// dsa
+	dsaCmd.PersistentFlags().StringVarP(&dsaType, "type", "t", "",
+		"type of key: [ecdsa, eddsa, rsa.....]")
+	dsaCmd.MarkFlagRequired("type")
+
 	dsaCmd.AddCommand(dsaCreateCmd)
 	dsaCmd.AddCommand(dsaGetCmd)
 	dsaCmd.AddCommand(dsaListCmd)

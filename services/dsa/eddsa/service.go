@@ -12,6 +12,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/user"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -28,12 +31,17 @@ import (
 	enc "github.com/amanelis/bespin/services/dsa/eddsa/encodings"
 	eer "github.com/amanelis/bespin/services/dsa/errors"
 	"github.com/amanelis/bespin/utils"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/text"
+	"github.com/sirupsen/logrus"
 )
 
 // KeyAPI main api for defining Key behavior and functions
 type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
+
+	getArtSignature() string
 
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
@@ -170,7 +178,7 @@ func ListEDDSA(c config.Reader) ([]KeyAPI, error) {
 		_key, _err := GetEDDSA(c, f.Name())
 
 		if _err != nil {
-			return nil, _err
+			continue
 		}
 
 		keys = append(keys, _key)
@@ -271,6 +279,45 @@ func (k *key) Struct() *key {
 	return k
 }
 
+// getArtSignature converts the public key to ssh art in sha256
+func (k *key) getArtSignature() string {
+	usr, err := user.Current()
+	if err != nil {
+		return "--- path err ---"
+	}
+
+	var pyPath string
+
+	if runtime.GOOS == "darwin" {
+		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
+	} else if runtime.GOOS == "linux" {
+		pyPath = "/usr/bin/python"
+	}
+
+	cmd := exec.Command(
+		pyPath,
+		"tmp/drunken_bishop.py",
+		"--mode",
+		"sha256",
+		k.FingerprintSHA,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "--- run err ---"
+	}
+
+	outStr, outErr := string(stdout.Bytes()), string(stderr.Bytes())
+	if outErr != "" {
+		return fmt.Sprintf("--- %s ---", outErr)
+	}
+
+	return outStr
+}
+
 // getPrivateKey takes in the key's base64 encodings and converts to a valid
 // eddsa.PrivateKey
 func (k *key) getPrivateKey() (*ed25519.PrivateKey, error) {
@@ -330,6 +377,125 @@ func keyFromGOB64(str string) (*key, error) {
 
 	return k, nil
 }
+
+// PrintKeysTW prints an elaborate way to display key information... not needed,
+// but nice for demos and visually displays the key randomArt via a python script
+func PrintKeysTW(keys []KeyAPI) {
+	stylePairs := [][]table.Style{
+		{table.StyleColoredBright},
+	}
+
+	for ndx, f := range keys {
+		tw := table.NewWriter()
+
+		var pr string
+		if f.Struct().PrivateKeyB64 == "" {
+			pr = "... ... ... ... ... ... ... ... ... ... ... ..."
+		} else {
+			pr = f.Struct().PrivateKeyB64[0:44]
+		}
+
+		var pu string
+		if f.Struct().PublicKeyB64 == "" {
+			pu = "... ... ... ... ... ... ... ... ... ... ... ..."
+		} else {
+			pu = f.Struct().PublicKeyB64[0:44]
+		}
+
+		tw.SetTitle(f.Struct().FilePointer())
+		tw.AppendRows([]table.Row{
+			{
+				"Name",
+				f.Struct().Name,
+			},
+			{
+				"Slug",
+				f.Struct().Slug,
+			},
+			{
+				"Type",
+				helpers.RFgB(f.Struct().KeyType),
+			},
+			{
+				"Created",
+				f.Struct().CreatedAt,
+			},
+			{
+				"PrivateKey",
+				pr,
+			},
+			{
+				"PublicKey",
+				pu,
+			},
+			// {
+			// 	"MD5",
+			// 	f.Struct().FingerprintMD5,
+			// },
+			// {
+			// 	"SHA256",
+			// 	f.Struct().FingerprintSHA,
+			// },
+			// {
+			// 	"SHA256 Visual",
+			// 	f.getArtSignature(),
+			// },
+		})
+
+		twOuter := table.NewWriter()
+		tw.SetStyle(table.StyleColoredDark)
+		tw.Style().Title.Align = text.AlignCenter
+
+		for _, stylePair := range stylePairs {
+			row := make(table.Row, 1)
+			for idx := range stylePair {
+				row[idx] = tw.Render()
+			}
+			twOuter.AppendRow(row)
+		}
+
+		twOuter.SetStyle(table.StyleDouble)
+		twOuter.SetTitle(fmt.Sprintf("Asymmetric Key (%d)", ndx))
+		twOuter.Style().Options.SeparateRows = true
+
+		fmt.Println(twOuter.Render())
+	}
+}
+
+// PrintKeyTW takes an array of keys and runs them through prettyPrint function
+func PrintKeyTW(k *key) {
+	PrintKeysTW([]KeyAPI{k})
+}
+
+// PrintKey is a helper function to print a key
+func PrintKey(k *key, l *logrus.Logger) {
+	l.Infof("Key GID: %s", helpers.MFgD(k.FilePointer()))
+	l.Infof("Key MD5: %s", helpers.MFgD(k.Struct().FingerprintMD5))
+	l.Infof("Key SHA: %s", helpers.MFgD(k.Struct().FingerprintSHA))
+	l.Infof("Key Type: %s", helpers.RFgB(k.Struct().KeyType))
+	l.Infof("Key Name: %s", helpers.YFgB(k.Struct().Name))
+	l.Infof("Key Slug: %s", helpers.YFgB(k.Struct().Slug))
+	l.Infof("Key Status: %s", helpers.YFgB(k.Struct().Status))
+	l.Infof("Key Created: %s", helpers.YFgB(k.Struct().CreatedAt))
+	l.Infof("	%s privateKey: %s......", helpers.RFgB(">"), k.Struct().PrivateKeyB64[0:64])
+	l.Infof("	%s publicKey:  %s......", helpers.RFgB(">"), k.Struct().PublicKeyB64[0:64])
+	l.Infof("	%s privatePemPath: %s", helpers.RFgB(">"), k.Struct().PrivatePemPath)
+	l.Infof("	%s privateKeyPath: %s", helpers.RFgB(">"), k.Struct().PrivateKeyPath)
+	l.Infof("	%s publicKeyPath:  %s", helpers.RFgB(">"), k.Struct().PublicKeyPath)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// Old klass
 
 const (
 	// PublicKeySize is the size of a serialized PublicKey in bytes (32 bytes).

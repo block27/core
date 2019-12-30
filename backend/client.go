@@ -20,7 +20,6 @@ import (
 
 var (
 	// AESDevice - crypto key/iv provider.
-	//
 	AESDeviceMac = "/dev/tty.usbmodem20021401"
 	AESDeviceArm = "/dev/ttyACM0"
 )
@@ -72,7 +71,7 @@ func NewBackend() (*Backend, error) {
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
 func (b *Backend) HardwareAuthenticate() error {
-	spinners, err := newSpinner(6)
+	spinners, err := newSpinner(3)
 	if err != nil {
 		return err
 	}
@@ -187,19 +186,16 @@ func (b *Backend) LocateDevice() (string, error) {
 	for _, f := range data {
 		// MacOSX
 		if strings.Contains(f.Name(), "tty.usbmodem") {
-			fmt.Printf("trying: tty.usbmodem\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 
 		// linux based OS
 		if strings.Contains(f.Name(), "ttyACM0") {
-			fmt.Printf("trying: ttyACM0\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 
 		// arm based OS
 		if strings.Contains(f.Name(), "ttyS1") {
-			fmt.Printf("trying: ttyS1\n")
 			return fmt.Sprintf("/dev/%s", f.Name()), nil
 		}
 	}
