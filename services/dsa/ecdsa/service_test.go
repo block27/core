@@ -82,7 +82,7 @@ func TestImportPublicECDSA256v1(t *testing.T) {
 
 	t.Logf("successfully imported [prime256v1-pubkey] [%s]", k1.FilePointer())
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
 		k1.FilePointer()))
 }
 
@@ -109,7 +109,7 @@ func TestImportPublicECDSA384r1(t *testing.T) {
 
 	t.Logf("successfully imported [secp384r1-pubkey] [%s]", k1.FilePointer())
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
 		k1.FilePointer()))
 }
 
@@ -161,7 +161,7 @@ func TestImportPublicECDSA512r1(t *testing.T) {
 
 	t.Logf("successfully imported [secp521r1-pubkey] [%s]", k1.FilePointer())
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
 		k1.FilePointer()))
 }
 
@@ -193,7 +193,7 @@ func TestNewECDSA(t *testing.T) {
 	// Check for filesystem keys are present
 	CheckFullKeyFileObjects(t, Config, k, "NewECDSA")
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/%s", Config.GetString("paths.keys"),
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
 		k.FilePointer()))
 }
 
@@ -208,7 +208,7 @@ func TestVerifyReadability(t *testing.T) {
 
 	AssertStructCorrectness(t, getKey, "PrivateKey", "prime256v1")
 
-	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
+	path := fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"), getKey.FilePointer())
 	t.Logf("Path reference: %s\n", path)
 
 	priBytes, _ := helpers.ReadBinary(fmt.Sprintf("%s/private.key", path))
@@ -557,7 +557,7 @@ func TestUnmarshall(t *testing.T) {
 		t.Fail()
 	}
 
-	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), k.FilePointer())
+	path := fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"), k.FilePointer())
 	obPa := fmt.Sprintf("%s/obj.bin", path)
 
 	objBytes, objErr := helpers.ReadBinary(obPa)
@@ -633,7 +633,7 @@ func TestKeyToGOB64(t *testing.T) {
 }
 
 func TestKeyFromGOB64(t *testing.T) {
-	file := fmt.Sprintf("%s/%s/obj.bin", Config.GetString("paths.keys"), Key.FilePointer())
+	file := fmt.Sprintf("%s/ecdsa/%s/obj.bin", Config.GetString("paths.keys"), Key.FilePointer())
 	data, err := helpers.ReadFile(file)
 	if err != nil {
 		t.Logf(err.Error())

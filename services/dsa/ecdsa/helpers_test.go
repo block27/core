@@ -68,7 +68,7 @@ func CheckFullKeyFileObjects(t *testing.T, c config.Reader, k KeyAPI, f string) 
 
 	// Check for filesystem keys are present
 	checkKeyFileObjects(t, f,
-		fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer()))
+		fmt.Sprintf("%s/ecdsa/%s", c.GetString("paths.keys"), k.FilePointer()))
 }
 
 func checkKeyFileObjects(t *testing.T, f string, p string) {

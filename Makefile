@@ -112,10 +112,10 @@ test_coverage_html:
 	@go tool cover -html=coverage.out
 
 test_golang: prepare_tests
-	@go test -v ./... -cover -coverprofile=coverage.out -bench=.
+	@go test -v ./... -cover -coverprofile=coverage.out #-bench=.
 
 test_gotest: prepare_tests
-	@gotest -v ./... -cover -coverprofile=coverage.out -bench=.
+	@gotest -v ./... -cover -coverprofile=coverage.out #-bench=.
 
 test_richgo: prepare_tests
-	@richgo test -v ./... -cover -coverprofile=coverage.out -bench=.
+	@richgo test -v ./... -cover -coverprofile=coverage.out #-bench=.

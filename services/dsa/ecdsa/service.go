@@ -135,7 +135,7 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 // GetECDSA fetches a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
 func GetECDSA(c config.Reader, fp string) (KeyAPI, error) {
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
+	dirPath := fmt.Sprintf("%s/ecdsa/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return (*key)(nil), eer.NewKeyPathError("invalid key path")
 	}
@@ -156,7 +156,7 @@ func GetECDSA(c config.Reader, fp string) (KeyAPI, error) {
 // ListECDSA returns a list of active keys stored on the local filesystem. Of
 // which are all encrypted via AES from the hardware block
 func ListECDSA(c config.Reader) ([]KeyAPI, error) {
-	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
+	files, err := ioutil.ReadDir(fmt.Sprintf("%s/ecdsa", c.GetString("paths.keys")))
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func ImportPublicECDSA(c config.Reader, name string, curve string, public []byte
 // writeToFS publishes the keys to the filesystem
 func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.PublicKey) error {
 	// Create the keys root directory based on it's FilePointer method
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
+	dirPath := fmt.Sprintf("%s/ecdsa/%s", c.GetString("paths.keys"), k.FilePointer())
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		os.Mkdir(dirPath, os.ModePerm)
 	}
