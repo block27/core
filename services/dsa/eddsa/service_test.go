@@ -103,7 +103,7 @@ func TestVerifyReadability(t *testing.T) {
 
 	AssertStructCorrectness(t, getKey)
 
-	path := fmt.Sprintf("%s/%s", Config.GetString("paths.keys"), getKey.FilePointer())
+	path := fmt.Sprintf("%s/eddsa/%s", Config.GetString("paths.keys"), getKey.FilePointer())
 	t.Logf("Path reference: %s\n", path)
 
 	priBytes, perr := helpers.ReadBinary(fmt.Sprintf("%s/private.key", path))

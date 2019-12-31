@@ -142,7 +142,7 @@ func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 // GetEDDSA fetches a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
 func GetEDDSA(c config.Reader, fp string) (KeyAPI, error) {
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), fp)
+	dirPath := fmt.Sprintf("%s/eddsa/%s", c.GetString("paths.keys"), fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return (*key)(nil), eer.NewKeyPathError("invalid key path")
 	}
@@ -163,7 +163,7 @@ func GetEDDSA(c config.Reader, fp string) (KeyAPI, error) {
 // ListEDDSA returns a list of active keys stored on the local filesystem. Of
 // which are all encrypted via AES from the hardware block
 func ListEDDSA(c config.Reader) ([]KeyAPI, error) {
-	files, err := ioutil.ReadDir(c.GetString("paths.keys"))
+	files, err := ioutil.ReadDir(fmt.Sprintf("%s/eddsa", c.GetString("paths.keys")))
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func ListEDDSA(c config.Reader) ([]KeyAPI, error) {
 // writeToFS
 func (k *key) writeToFS(c config.Reader, pri *privateKey, pub *publicKey) error {
 	// Create the keys root directory based on it's FilePointer method
-	dirPath := fmt.Sprintf("%s/%s", c.GetString("paths.keys"), k.FilePointer())
+	dirPath := fmt.Sprintf("%s/eddsa/%s", c.GetString("paths.keys"), k.FilePointer())
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		os.Mkdir(dirPath, os.ModePerm)
 	}
@@ -483,17 +483,6 @@ func PrintKey(k *key, l *logrus.Logger) {
 	l.Infof("	%s privateKeyPath: %s", helpers.RFgB(">"), k.Struct().PrivateKeyPath)
 	l.Infof("	%s publicKeyPath:  %s", helpers.RFgB(">"), k.Struct().PublicKeyPath)
 }
-
-
-
-
-
-
-
-
-
-
-
 
 // Old klass
 
