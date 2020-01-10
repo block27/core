@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,7 +9,6 @@ import (
 
 	h "github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/services/dsa/ecdsa"
-	"github.com/amanelis/bespin/services/dsa/eddsa"
 	"github.com/amanelis/bespin/services/dsa/signature"
 )
 
@@ -74,6 +74,10 @@ func init() {
 	dsaImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "p", "", "publicKey required")
 }
 
+func dsaTypePanic() error {
+	return errors.New(invalidKeyType())
+}
+
 func invalidKeyType() string {
 	return fmt.Sprintf("Invalid keyType passed (%s), usage: [ecdsa, eddsa, rsa]\n", dsaType)
 }
@@ -97,24 +101,12 @@ var dsaCreateCmd = &cobra.Command{
 		B.L.Printf("%s", h.CFgB("=== Keys[CREATE]"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		switch dsaType {
-		case "ecdsa":
-			key, e := ecdsa.NewECDSA(*B.C, createName, createCurve)
-			if e != nil {
-				panic(e)
-			}
-
-			ecdsa.PrintKeyTW(key.Struct())
-		case "eddsa":
-			key, e := eddsa.NewEDDSA(*B.C, createName)
-			if e != nil {
-				panic(e)
-			}
-
-			eddsa.PrintKeyTW(key.Struct())
-		default:
-			B.L.Errorf(invalidKeyType())
+		key, e := ecdsa.NewECDSA(*B.C, createName, createCurve)
+		if e != nil {
+			panic(e)
 		}
+
+		ecdsa.PrintKeyTW(key.Struct())
 	},
 }
 
@@ -125,24 +117,12 @@ var dsaGetCmd = &cobra.Command{
 		B.L.Printf("%s", h.CFgB("=== Keys[GET]"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		switch dsaType {
-		case "ecdsa":
-			key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
-			if e != nil {
-				panic(e)
-			}
-
-			ecdsa.PrintKeyTW(key.Struct())
-		case "eddsa":
-			key, e := eddsa.GetEDDSA(*B.C, getIdentifier)
-			if e != nil {
-				panic(e)
-			}
-
-			eddsa.PrintKeyTW(key.Struct())
-		default:
-			B.L.Errorf(invalidKeyType())
+		key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
+		if e != nil {
+			panic(e)
 		}
+
+		ecdsa.PrintKeyTW(key.Struct())
 	},
 }
 
@@ -153,31 +133,15 @@ var dsaListCmd = &cobra.Command{
 		B.L.Printf("%s", h.CFgB("=== Keys[LIST]"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		switch dsaType {
-		case "ecdsa":
-			keys, err := ecdsa.ListECDSA(*B.C)
-			if err != nil {
-				panic(err)
-			}
+		keys, err := ecdsa.ListECDSA(*B.C)
+		if err != nil {
+			panic(err)
+		}
 
-			if len(keys) == 0 {
-				B.L.Printf("No keys available")
-			} else {
-				ecdsa.PrintKeysTW(keys)
-			}
-		case "eddsa":
-			keys, err := eddsa.ListEDDSA(*B.C)
-			if err != nil {
-				panic(err)
-			}
-
-			if len(keys) == 0 {
-				B.L.Printf("No keys available")
-			} else {
-				eddsa.PrintKeysTW(keys)
-			}
-		default:
-			B.L.Errorf(invalidKeyType())
+		if len(keys) == 0 {
+			B.L.Printf("No keys available")
+		} else {
+			ecdsa.PrintKeysTW(keys)
 		}
 	},
 }
@@ -186,6 +150,10 @@ var dsaSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with Key",
 	PreRun: func(cmd *cobra.Command, args []string) {
+		if dsaType == "" {
+			panic(dsaTypePanic())
+		}
+
 		B.L.Printf("%s", h.CFgB("=== Keys[SIGN]"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -225,7 +193,6 @@ var dsaSignCmd = &cobra.Command{
 		if derr != nil {
 			panic(derr)
 		}
-
 		// Sign the data with the private key used internally
 		sig, serr := key.Sign([]byte(file.GetSHA()))
 		if serr != nil {
@@ -245,10 +212,6 @@ var dsaSignCmd = &cobra.Command{
 			panic(err)
 		}
 
-		B.L.Printf("%s%s%s%s", h.WFgB("=== MD5("),
-			h.RFgB(signFilePath), h.WFgB(") = "),
-			h.GFgB(file.GetMD5()))
-
 		B.L.Printf("%s%s%s%s", h.WFgB("=== SHA("),
 			h.RFgB(signFilePath), h.WFgB(") = "),
 			h.GFgB(file.GetSHA()))
@@ -258,9 +221,6 @@ var dsaSignCmd = &cobra.Command{
 			h.RFgB(derF),
 			h.WFgB(")"),
 			len(sig.R.Text(10)), sig.R, len(sig.S.Text(10)), sig.S)
-
-		// B.L.Printf("%s%s", h.WhiteFgB("=== Verified: "),
-		// 	h.GreenFgB(key.Verify(file.GetBody(), sig)))
 	},
 }
 

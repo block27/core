@@ -292,15 +292,15 @@ func newSpinner(num int) ([]*spinner.Spinner, error) {
 
 	var spinners []*spinner.Spinner
 
-	minF, maxF := 0, len(f)-1
+	// minF, maxF := 0, len(f)-1
 	minC, maxC := 0, len(h.Colors)-1
 
 	for i := 0; i < num; i++ {
 
-		ndxFnt := rand.Intn(maxF-minF+1) + minF
+		// ndxFnt := rand.Intn(maxF-minF+1) + minF
 		ndxCol := rand.Intn(maxC-minC+1) + minC
 
-		s := spinner.New(spinner.CharSets[ndxFnt], 75*time.Millisecond)
+		s := spinner.New(spinner.CharSets[11], 75*time.Millisecond)
 		s.Color(h.Colors[ndxCol], "bold")
 
 		spinners = append(spinners, s)
