@@ -12,9 +12,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"os/user"
-	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -30,10 +27,10 @@ import (
 	ecd "github.com/amanelis/bespin/services/dsa/eddsa/ecdh"
 	enc "github.com/amanelis/bespin/services/dsa/eddsa/encodings"
 	eer "github.com/amanelis/bespin/services/dsa/errors"
+	sig "github.com/amanelis/bespin/services/dsa/signature"
 	"github.com/amanelis/bespin/utils"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
-	"github.com/sirupsen/logrus"
 )
 
 // KeyAPI main api for defining Key behavior and functions
@@ -41,10 +38,14 @@ type KeyAPI interface {
 	FilePointer() string
 	Struct() *key
 
-	getArtSignature() string
+	getPrivateKey() (*ed25519.PrivateKey, error)
+	getPublicKey() (*ed25519.PublicKey, error)
 
 	Marshall() (string, error)
 	Unmarshall(string) (KeyAPI, error)
+
+	Sign([]byte) (*sig.Signature, error)
+	Verify([]byte, *sig.Signature) bool
 }
 
 type publicKey struct {
@@ -126,8 +127,8 @@ func NewEDDSA(c config.Reader, name string) (KeyAPI, error) {
 		Status:         api.StatusActive,
 		PublicKeyB64:   k.pubKey.b64String,
 		PrivateKeyB64:  k.b64String,
-		FingerprintMD5: string(crypto.DigestMD5Sum(pub)),
-		FingerprintSHA: string(crypto.DigestSHA256Sum(pub)),
+		FingerprintMD5: string(pub),
+		FingerprintSHA: string(pub),
 		CreatedAt:      time.Now(),
 	}
 
@@ -272,50 +273,26 @@ func (k *key) Unmarshall(string) (KeyAPI, error) {
 	return nil, nil
 }
 
+func (k *key) Sign(data []byte) (*sig.Signature, error) {
+	return nil, nil
+}
+
+// Verify verifies the signature in r, s of hash using the public key, pub. Its
+// return value records whether the signature is valid.
+func (k *key) Verify(hash []byte, sig *sig.Signature) bool {
+	// pub, err := k.getPublicKey()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	return false
+}
+
 // Struct returns the full object for access to non exported fields, not sure
 // about this, but fine for now... think of a better way to implement such need,
 // perhaps just using attribute getters will suffice...
 func (k *key) Struct() *key {
 	return k
-}
-
-// getArtSignature converts the public key to ssh art in sha256
-func (k *key) getArtSignature() string {
-	usr, err := user.Current()
-	if err != nil {
-		return "--- path err ---"
-	}
-
-	var pyPath string
-
-	if runtime.GOOS == "darwin" {
-		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
-	} else if runtime.GOOS == "linux" {
-		pyPath = "/usr/bin/python"
-	}
-
-	cmd := exec.Command(
-		pyPath,
-		"tmp/drunken_bishop.py",
-		"--mode",
-		"sha256",
-		k.FingerprintSHA,
-	)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return "--- run err ---"
-	}
-
-	outStr, outErr := string(stdout.Bytes()), string(stderr.Bytes())
-	if outErr != "" {
-		return fmt.Sprintf("--- %s ---", outErr)
-	}
-
-	return outStr
 }
 
 // getPrivateKey takes in the key's base64 encodings and converts to a valid
@@ -428,18 +405,14 @@ func PrintKeysTW(keys []KeyAPI) {
 				"PublicKey",
 				pu,
 			},
-			// {
-			// 	"MD5",
-			// 	f.Struct().FingerprintMD5,
-			// },
-			// {
-			// 	"SHA256",
-			// 	f.Struct().FingerprintSHA,
-			// },
-			// {
-			// 	"SHA256 Visual",
-			// 	f.getArtSignature(),
-			// },
+			{
+				"MD5",
+				[]byte(f.Struct().FingerprintMD5)[0:12],
+			},
+			{
+				"SHA256",
+				[]byte(f.Struct().FingerprintSHA)[0:12],
+			},
 		})
 
 		twOuter := table.NewWriter()
@@ -448,9 +421,11 @@ func PrintKeysTW(keys []KeyAPI) {
 
 		for _, stylePair := range stylePairs {
 			row := make(table.Row, 1)
+
 			for idx := range stylePair {
 				row[idx] = tw.Render()
 			}
+
 			twOuter.AppendRow(row)
 		}
 
@@ -465,23 +440,6 @@ func PrintKeysTW(keys []KeyAPI) {
 // PrintKeyTW takes an array of keys and runs them through prettyPrint function
 func PrintKeyTW(k *key) {
 	PrintKeysTW([]KeyAPI{k})
-}
-
-// PrintKey is a helper function to print a key
-func PrintKey(k *key, l *logrus.Logger) {
-	l.Infof("Key GID: %s", helpers.MFgD(k.FilePointer()))
-	l.Infof("Key MD5: %s", helpers.MFgD(k.Struct().FingerprintMD5))
-	l.Infof("Key SHA: %s", helpers.MFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key Type: %s", helpers.RFgB(k.Struct().KeyType))
-	l.Infof("Key Name: %s", helpers.YFgB(k.Struct().Name))
-	l.Infof("Key Slug: %s", helpers.YFgB(k.Struct().Slug))
-	l.Infof("Key Status: %s", helpers.YFgB(k.Struct().Status))
-	l.Infof("Key Created: %s", helpers.YFgB(k.Struct().CreatedAt))
-	l.Infof("	%s privateKey: %s......", helpers.RFgB(">"), k.Struct().PrivateKeyB64[0:64])
-	l.Infof("	%s publicKey:  %s......", helpers.RFgB(">"), k.Struct().PublicKeyB64[0:64])
-	l.Infof("	%s privatePemPath: %s", helpers.RFgB(">"), k.Struct().PrivatePemPath)
-	l.Infof("	%s privateKeyPath: %s", helpers.RFgB(">"), k.Struct().PrivateKeyPath)
-	l.Infof("	%s publicKeyPath:  %s", helpers.RFgB(">"), k.Struct().PublicKeyPath)
 }
 
 // Old klass

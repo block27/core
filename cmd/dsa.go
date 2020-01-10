@@ -8,8 +8,8 @@ import (
 
 	h "github.com/amanelis/bespin/helpers"
 	"github.com/amanelis/bespin/services/dsa/ecdsa"
-	"github.com/amanelis/bespin/services/dsa/ecdsa/signature"
 	"github.com/amanelis/bespin/services/dsa/eddsa"
+	"github.com/amanelis/bespin/services/dsa/signature"
 )
 
 var (
@@ -36,14 +36,14 @@ var (
 	verifySignaturePath string
 
 	// ImportPub flags
-	importPubName		string
-	importPubCurve 	string
-	importPubFile		string
+	importPubName  string
+	importPubCurve string
+	importPubFile  string
 )
 
 func init() {
 	// Create flags ...
-	dsaCreateCmd.Flags().StringVarP(&createName,  "name", "n", "", "name required")
+	dsaCreateCmd.Flags().StringVarP(&createName, "name", "n", "", "name required")
 	dsaCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "default: prime256v1")
 	dsaCreateCmd.MarkFlagRequired("name")
 
@@ -94,8 +94,8 @@ var dsaCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new key pair",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[CREATE]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[CREATE]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		switch dsaType {
 		case "ecdsa":
@@ -122,8 +122,8 @@ var dsaGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get key by identifier",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[GET]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[GET]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		switch dsaType {
 		case "ecdsa":
@@ -150,8 +150,8 @@ var dsaListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all keys",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[LIST]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[LIST]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		switch dsaType {
 		case "ecdsa":
@@ -186,9 +186,34 @@ var dsaSignCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Sign data with Key",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[SIGN]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[SIGN]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
+		// var key interface{}
+		//
+		// switch dsaType {
+		// case "ecdsa":
+		// 	var err error
+		//
+		// 	key, err = ecdsa.GetECDSA(*B.C, signIdentifier)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		//
+		// 	key = key.(ecdsa.KeyAPI)
+		// case "eddsa":
+		// 	var err error
+		//
+		// 	key, err = eddsa.GetEDDSA(*B.C, signIdentifier)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		//
+		// 	key = key.(eddsa.KeyAPI)
+		// default:
+		// 	B.L.Errorf(invalidKeyType())
+		// }
+
 		key, err := ecdsa.GetECDSA(*B.C, signIdentifier)
 		if err != nil {
 			panic(err)
@@ -214,7 +239,7 @@ var dsaSignCmd = &cobra.Command{
 		}
 
 		// Now write a signarture.der file to hold the signature
-		derF := fmt.Sprintf("/var/data/keys/%s/signature-%d.der", key.FilePointer(),
+		derF := fmt.Sprintf("/var/data/keys/%s/%s/signature-%d.der", dsaType, key.FilePointer(),
 			int32(time.Now().Unix()))
 		if _, err := h.WriteBinary(derF, derD); err != nil {
 			panic(err)
@@ -243,8 +268,8 @@ var dsaVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[VERIFY]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[VERIFY]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := ecdsa.GetECDSA(*B.C, verifyIdentifier)
 		if err != nil {
@@ -273,11 +298,11 @@ var dsaImportPubCmd = &cobra.Command{
 	Use:   "importPub",
 	Short: "Import a public key",
 	PreRun: func(cmd *cobra.Command, args []string) {
-    B.L.Printf("%s", h.CFgB("=== Keys[IMPORT:PUB]"))
-  },
+		B.L.Printf("%s", h.CFgB("=== Keys[IMPORT:PUB]"))
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		pub, err := h.NewFile(importPubFile)
-		if err !=nil {
+		if err != nil {
 			panic(err)
 		}
 

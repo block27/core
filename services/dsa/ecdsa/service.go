@@ -24,8 +24,8 @@ import (
 	api "github.com/amanelis/bespin/services/dsa"
 	enc "github.com/amanelis/bespin/services/dsa/ecdsa/encodings"
 	mar "github.com/amanelis/bespin/services/dsa/ecdsa/marshall"
-	sig "github.com/amanelis/bespin/services/dsa/ecdsa/signature"
 	eer "github.com/amanelis/bespin/services/dsa/errors"
+	sig "github.com/amanelis/bespin/services/dsa/signature"
 
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
