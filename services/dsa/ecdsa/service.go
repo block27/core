@@ -30,7 +30,6 @@ import (
 	guuid "github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
-	"github.com/sirupsen/logrus"
 )
 
 // KeyAPI main api for defining Key behavior and functions
@@ -592,21 +591,4 @@ func PrintKeysTW(keys []KeyAPI) {
 // PrintKeyTW takes an array of keys and runs them through prettyPrint function
 func PrintKeyTW(k *key) {
 	PrintKeysTW([]KeyAPI{k})
-}
-
-// PrintKey is a helper function to print a key
-func PrintKey(k *key, l *logrus.Logger) {
-	l.Infof("Key GID: %s", helpers.MFgD(k.FilePointer()))
-	l.Infof("Key MD5: %s", helpers.MFgD(k.Struct().FingerprintMD5))
-	l.Infof("Key SHA: %s", helpers.MFgD(k.Struct().FingerprintSHA))
-	l.Infof("Key Type: %s", helpers.RFgB(k.Struct().KeyType))
-	l.Infof("Key Name: %s", helpers.YFgB(k.Struct().Name))
-	l.Infof("Key Slug: %s", helpers.YFgB(k.Struct().Slug))
-	l.Infof("Key Status: %s", helpers.YFgB(k.Struct().Status))
-	l.Infof("Key Created: %s", helpers.YFgB(k.Struct().CreatedAt))
-	l.Infof("	%s privateKey: %s......", helpers.RFgB(">"), k.Struct().PrivateKeyB64[0:64])
-	l.Infof("	%s publicKey:  %s......", helpers.RFgB(">"), k.Struct().PublicKeyB64[0:64])
-	l.Infof("	%s privatePemPath: %s", helpers.RFgB(">"), k.Struct().PrivatePemPath)
-	l.Infof("	%s privateKeyPath: %s", helpers.RFgB(">"), k.Struct().PrivateKeyPath)
-	l.Infof("	%s publicKeyPath:  %s", helpers.RFgB(">"), k.Struct().PublicKeyPath)
 }
