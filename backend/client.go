@@ -153,7 +153,7 @@ func (b *Backend) HardwareAuthenticate() error {
 
 		return fmt.Errorf("%s", h.RFgB("key does not match Hardware(key)"))
 	}
-	kLen := len(string(kVal.Bytes()))
+	// kLen := len(string(kVal.Bytes()))
 
 	// ---------------------------------------------------------------------------
 	iVal, aesErr := aes.Iv().Open()
@@ -169,14 +169,14 @@ func (b *Backend) HardwareAuthenticate() error {
 		}
 		return fmt.Errorf("%s", h.RFgB("iv does not match Hardware(iv)"))
 	}
-	iLen := len(string(iVal.Bytes()))
+	// iLen := len(string(iVal.Bytes()))
 
 	for i := 0; i < len(spinners); i++ {
 		spinners[i].Stop()
 	}
 
-	fmt.Printf("hw ky(%d) verified, %s\n", kLen, h.GFgB("OK"))
-	fmt.Printf("hw iv(%d) verified, %s\n", iLen, h.GFgB("OK"))
+	// fmt.Printf("hw ky(%d) verified, %s\n", kLen, h.GFgB("OK"))
+	// fmt.Printf("hw iv(%d) verified, %s\n", iLen, h.GFgB("OK"))
 
 	// Create a cypter service object - encryption/decryption
 	c, _ := crypto.NewCrypter(
@@ -234,7 +234,9 @@ func (b *Backend) locateDevice() (string, error) {
 	}
 
 	ctx := gousb.NewContext()
-	devices, _ := ctx.OpenDevices(findMPD26(d.Product, d.Vendor))
+	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+		return desc.Product == gousb.ID(d.Product) && desc.Vendor == gousb.ID(d.Vendor)
+	})
 
 	if len(devices) == 0 {
 		return "", fmt.Errorf(h.RFgB("invalid authentication device"))
