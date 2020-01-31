@@ -6,12 +6,18 @@ import (
 	"crypto/sha256"
 	"errors"
 
+	"github.com/awnumar/memguard"
 	"github.com/spacemonkeygo/openssl"
 )
 
 type AESCredentials struct {
 	key []byte
 	iv  []byte
+}
+
+type AESCredentialsEnclave struct {
+	key *memguard.Enclave
+	iv  *memguard.Enclave
 }
 
 type Crypter struct {
@@ -37,13 +43,15 @@ func DigestSHA1Sum(data []byte) []byte {
 	return h.Sum(nil)
 }
 
-// DigestSHA256Sum uses SHA256 digest to create the key which is the default behaviour since OpenSSL 1.1.0c
+// DigestSHA256Sum uses SHA256 digest to create the key which is the default
+// behaviour since OpenSSL 1.1.0c
 func DigestSHA256Sum(data []byte) []byte {
 	h := sha256.New()
 	h.Write(data)
 	return h.Sum(nil)
 }
 
+// NewCrypter AES 256 CBC mode encryption object
 func NewCrypter(key []byte, iv []byte) (*Crypter, error) {
 	cipher, err := openssl.GetCipherByName("aes-256-cbc")
 	if err != nil {
@@ -53,6 +61,7 @@ func NewCrypter(key []byte, iv []byte) (*Crypter, error) {
 	return &Crypter{key, iv, cipher}, nil
 }
 
+// NewAESCredentials returns an AESCredentials object
 func NewAESCredentials(key []byte, iv []byte) (*AESCredentials, error) {
 	if len(string(key)) != 32 {
 		return nil, errors.New("Key is of invalid length / required 32 bytes")
@@ -65,11 +74,49 @@ func NewAESCredentials(key []byte, iv []byte) (*AESCredentials, error) {
 	return &AESCredentials{key, iv}, nil
 }
 
+// NewAESCredentialsEnclave takes input and returns encrypted enclave for holding
+// of the Struct
+func NewAESCredentialsEnclave(key *memguard.Enclave, iv *memguard.Enclave) (*AESCredentialsEnclave, error) {
+	k, err := key.Open()
+	if err != nil {
+		memguard.SafePanic(err)
+	}
+
+	i, err := iv.Open()
+	if err != nil {
+		memguard.SafePanic(err)
+	}
+
+	k.Melt()
+	i.Melt()
+
+	if len(string(k.Bytes())) != 32 {
+		return nil, errors.New("Key is of invalid length / required 32 bytes")
+	}
+
+	if len(string(i.Bytes())) != 16 {
+		return nil, errors.New("Iv is of invalid length / required 16 bytes")
+	}
+
+	return &AESCredentialsEnclave{
+		k.Seal(),
+		i.Seal(),
+	},  nil
+}
+
 func (c *AESCredentials) Key() []byte {
 	return c.key
 }
 
 func (c *AESCredentials) Iv() []byte {
+	return c.iv
+}
+
+func (c *AESCredentialsEnclave) Key() *memguard.Enclave {
+	return c.key
+}
+
+func (c *AESCredentialsEnclave) Iv() *memguard.Enclave {
 	return c.iv
 }
 

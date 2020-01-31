@@ -1,10 +1,12 @@
 package backend
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"runtime"
+	// "strconv"
 	"strings"
 	"time"
 
@@ -14,14 +16,10 @@ import (
 	"github.com/amanelis/bespin/services/bbolt"
 	"github.com/amanelis/bespin/services/serial"
 
+	"github.com/google/gousb"
+	"github.com/awnumar/memguard"
 	"github.com/briandowns/spinner"
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	// AESDevice - crypto key/iv provider.
-	AESDeviceMac = "/dev/tty.usbmodem20021401"
-	AESDeviceArm = "/dev/ttyACM0"
 )
 
 // Backend - main struct for the entire application configuration
@@ -34,6 +32,14 @@ type Backend struct {
 
 	// L - a logrus logger, customized for this application
 	L *logrus.Logger
+}
+
+// device - capture data in from connected AES/Arduino usbmodem
+type device struct {
+	Product uint16 `json:"product"`
+	Vendor 	uint16 `json:"vendor"`
+	Serial 	string `json:"serial"`
+	Manufacturer string `json:"manufacturer"`
 }
 
 func init() {
@@ -118,7 +124,7 @@ func (b *Backend) HardwareAuthenticate() error {
 	}
 
 	// Pull the Key/Iv off the hardware device
-	aes, err := b.RequestHardwareKeys()
+	aes, err := b.requestHardwareKeys()
 	if err != nil {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
@@ -129,25 +135,48 @@ func (b *Backend) HardwareAuthenticate() error {
 	hmK, _ := h.ReadFile(config.HostMasterKeyPath)
 	hmI, _ := h.ReadFile(config.HostMasterIvPath)
 
-	if string(aes.Key()) != hmK {
+	// ---------------------------------------------------------------------------
+	kVal, aesErr := aes.Key().Open()
+	if aesErr != nil {
+		fmt.Println(aesErr)
+		return fmt.Errorf("invalid memory decryption on AES[key]")
+	}
+	defer kVal.Destroy()
+	kVal.Melt()
+
+	if string(kVal.Bytes()) != hmK {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
 		}
+
+		fmt.Printf("key: %s, val: %s\n", string(kVal.Bytes()), hmK)
+
 		return fmt.Errorf("%s", h.RFgB("key does not match Hardware(key)"))
 	}
+	kLen := len(string(kVal.Bytes()))
 
-	if string(aes.Iv()) != hmI {
+	// ---------------------------------------------------------------------------
+	iVal, aesErr := aes.Iv().Open()
+	if aesErr != nil {
+		return fmt.Errorf("invalid memory decryption on AES[iv]")
+	}
+	defer iVal.Destroy()
+	iVal.Melt()
+
+	if string(iVal.Bytes()) != hmI {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
 		}
 		return fmt.Errorf("%s", h.RFgB("iv does not match Hardware(iv)"))
 	}
+	iLen := len(string(iVal.Bytes()))
 
 	for i := 0; i < len(spinners); i++ {
 		spinners[i].Stop()
 	}
-	fmt.Printf("hw ky(%d) verified, %s\n", len(string(aes.Key())), h.GFgB("OK"))
-	fmt.Printf("hw iv(%d) verified, %s\n", len(string(aes.Iv())), h.GFgB("OK"))
+
+	fmt.Printf("hw ky(%d) verified, %s\n", kLen, h.GFgB("OK"))
+	fmt.Printf("hw iv(%d) verified, %s\n", iLen, h.GFgB("OK"))
 
 	// Create a cypter service object - encryption/decryption
 	c, _ := crypto.NewCrypter(
@@ -176,11 +205,46 @@ func (b *Backend) HardwareAuthenticate() error {
 	return nil
 }
 
-// LocateDevice ... temporary fix, but need to  find the AES device to  starts
-func (b *Backend) LocateDevice() (string, error) {
+func findMPD26(product, vendor uint16) func(desc *gousb.DeviceDesc) bool {
+  return func(desc *gousb.DeviceDesc) bool {
+    return desc.Product == gousb.ID(product) && desc.Vendor == gousb.ID(vendor)
+  }
+}
+
+// locateDevice ... temporary fix, but need to  find the AES device to  starts
+func (b *Backend) locateDevice() (string, error) {
 	data, err := ioutil.ReadDir("/dev")
 	if err != nil {
 		return "", err
+	}
+
+	// Run device identification process
+	// Open our jsonFile
+	f, err := h.NewFile("/var/data/device")
+	if err != nil {
+		return "", err
+	}
+
+	var d device
+
+	// Unmarshall data into struct var
+	jerr := json.Unmarshal([]byte(string(f.GetBody())), &d)
+	if jerr != nil {
+		return "", fmt.Errorf(h.RFgB("invalid device mapping file"))
+	}
+
+	ctx := gousb.NewContext()
+	devices, _ := ctx.OpenDevices(findMPD26(d.Product, d.Vendor))
+
+	if len(devices) == 0 {
+		return "", fmt.Errorf(h.RFgB("invalid authentication device"))
+	}
+
+	m, _ := devices[0].Manufacturer()
+	s, _ := devices[0].SerialNumber()
+
+	if m != d.Manufacturer || s != d.Serial {
+		return "", fmt.Errorf(h.RFgB("device manufacturer and serial did not match"))
 	}
 
 	for _, f := range data {
@@ -203,7 +267,7 @@ func (b *Backend) LocateDevice() (string, error) {
 	return "", nil
 }
 
-// RequestHardwareKeys ...
+// requestHardwareKeys ...
 //
 // This function calls the arduino board for the hardware keys via USB and
 // there are a few details to be noted:
@@ -219,8 +283,8 @@ func (b *Backend) LocateDevice() (string, error) {
 // IV:
 // iv(base64) -> i.Request.base24 	// 24 bytes
 // iv(raw) -> i.Request.byte16 			// 16 bytes
-func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
-	dev, err := b.LocateDevice()
+func (b *Backend) requestHardwareKeys() (*crypto.AESCredentialsEnclave, error) {
+	dev, err := b.locateDevice()
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +298,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 
 	// Request KEY
 	ky, ke := c.Request(serial.Request{
-		Method: "k.Request.byte32\r",
+		Method: "k.Request.hex32\r",
 		Size:   32,
 	})
 
@@ -242,9 +306,13 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 		return nil, ke
 	}
 
+	// Hold the key in an enclave
+	kyEn := memguard.NewEnclave([]byte(ky))
+	ky, ke = nil, nil
+
 	// Request IV
 	iv, ie := c.Request(serial.Request{
-		Method: "i.Request.byte16\r",
+		Method: "i.Request.hex16\r",
 		Size:   16,
 	})
 
@@ -252,7 +320,11 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 		return nil, ie
 	}
 
-	aes, err := crypto.NewAESCredentials(ky, iv)
+	// Hold the iv in an enclave
+	ivEn := memguard.NewEnclave([]byte(iv))
+	iv, ie = nil, nil
+
+	aes, err := crypto.NewAESCredentialsEnclave(kyEn, ivEn)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +334,7 @@ func (b *Backend) RequestHardwareKeys() (*crypto.AESCredentials, error) {
 
 // Welcome - prints a nice welcome message with some info on environment
 func (b *Backend) Welcome() {
-	dev, err := b.LocateDevice()
+	dev, err := b.locateDevice()
 	if err != nil {
 		panic(err)
 	}
@@ -296,7 +368,6 @@ func newSpinner(num int) ([]*spinner.Spinner, error) {
 	minC, maxC := 0, len(h.Colors)-1
 
 	for i := 0; i < num; i++ {
-
 		// ndxFnt := rand.Intn(maxF-minF+1) + minF
 		ndxCol := rand.Intn(maxC-minC+1) + minC
 
@@ -304,7 +375,6 @@ func newSpinner(num int) ([]*spinner.Spinner, error) {
 		s.Color(h.Colors[ndxCol], "bold")
 
 		spinners = append(spinners, s)
-
 	}
 
 	return spinners, nil

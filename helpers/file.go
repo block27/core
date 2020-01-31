@@ -13,7 +13,7 @@ import (
 
 // File interface
 type File interface {
-	ReadBinary(string) ([]byte, error)
+	readBinary(string) ([]byte, error)
 
 	GetBody() []byte
 	GetPath() string
@@ -41,7 +41,7 @@ func NewFile(path string) (File, error)  {
 		Path: path,
 	}
 
-	data, err := f.ReadBinary(path)
+	data, err := f.readBinary(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s", RFgB("error reading file"))
 	}
@@ -68,7 +68,7 @@ func (f *file) GetSHA() string {
 }
 
 // ReadBinary ...
-func (f *file) ReadBinary(filename string) ([]byte, error) {
+func (f *file) readBinary(filename string) ([]byte, error) {
 	file, err := os.Open(filename)
 
 	if err != nil {

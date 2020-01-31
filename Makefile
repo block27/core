@@ -37,11 +37,15 @@ v: version
 .PHONY: all build build_all ctags test version
 
 build:
-	@go build -o bin/sigma-cli main.go
+	@go build -o bin/sigma-api pkg/api/main.go
+	@go build -o bin/sigma-cli pkg/cli/main.go
 
 build_all:
 	@GOOS=darwin GOARCH=amd64 go build -x -o bin/sigma-cli-$(VERSION)-osx-64 main.go
 	@GOOS=linux  GOARCH=amd64 go build -x -o bin/sigma-cli-$(VERSION)-linux-64 main.go
+
+clean:
+	@rm  -rf bin/sigma-*
 
 code_show:
 	@echo "SRC  = $(GO_SRC_DIRS)"
@@ -57,7 +61,8 @@ configuration:
 
 ctags:
 	@echo "Generating application ctags..."
-	@gotags -tag-relative=true -R=true -sort=true -f="tags" -fields=+l .
+	for x in $(ls -d -- */ | grep -v "vendor/"); do gotags -R ${x}. >> tags; done
+	# @gotags -tag-relative=true -R=true -sort=true -f="tags" -fields=+l .
 
 ecdsa_generate:
 	openssl ecparam -genkey -name secp256k1 -out privkey.pem
@@ -101,6 +106,10 @@ setup_machine:
 
 version:
 	@echo ${VERSION}
+
+update:
+	govendor add +external
+	govendor update -tree
 
 # TESTING ----------------------------------------------------------------------
 test: test_richgo
