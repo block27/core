@@ -12,11 +12,17 @@ var (
 	// DryRun does not commit or change data
 	DryRun bool
 
+	// UsrPin required to make requests
+	UsrPin string
+
+	// UsrPuk used to reset the pin
+	UsrPuk string
+
 	// B - main backend interface that holds all functionality
 	B *backend.Backend
 
 	rootCmd = &cobra.Command{
-		Use:   "sigma",
+		Use: "cli",
 		Short: fmt.Sprintf("%s: ECDSA/RSA key generation, signing, AES encrypt/decrypt, and secure backup", h.GFgB("Sigma CLI")),
 		Run: func(cmd *cobra.Command, args []string) {
 			B.Welcome()
@@ -42,18 +48,21 @@ func init() {
 	// flags
 	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false,
 		"dry, no commits to real data")
+	rootCmd.PersistentFlags().StringVarP(&UsrPin, "pin", "p", "",
+		"pin, for session authentication")
 
 	// dsa
-	dsaCmd.PersistentFlags().StringVarP(&dsaType, "type", "t", "",
-		"type of key: [ecdsa, eddsa, rsa.....]")
-	dsaCmd.MarkFlagRequired("type")
-
 	dsaCmd.AddCommand(dsaCreateCmd)
 	dsaCmd.AddCommand(dsaGetCmd)
 	dsaCmd.AddCommand(dsaListCmd)
 	dsaCmd.AddCommand(dsaSignCmd)
 	dsaCmd.AddCommand(dsaVerifyCmd)
+	dsaCmd.AddCommand(dsaExportPubCmd)
 	dsaCmd.AddCommand(dsaImportPubCmd)
+
+	// root Flags
+	dsaCmd.PersistentFlags().StringVarP(&dsaType, "type", "t", "",
+		"type of key: [ecdsa, eddsa, rsa.....]")
 
 	// Fire post configuration
 	postConfig()
@@ -62,6 +71,10 @@ func init() {
 func preConfig() {
 	if DryRun {
 		fmt.Printf("%s", h.YFgB("*** --dry-run enabled, no data will be saved ***\n"))
+	}
+
+	if UsrPin == "" || UsrPin != "000000" {
+		panic("invalid pin")
 	}
 }
 

@@ -1,37 +1,43 @@
 package main
 
 import (
-	// "bytes"
-	// "crypto/ecdsa"
 	"crypto/x509"
-	// "crypto/elliptic"
-	// "encoding/gob"
 	"fmt"
-	// "math/big"
+	"os"
 
 	"github.com/amanelis/bespin/helpers"
 )
 
 func main() {
-	fmt.Println("Hello")
+	if len(os.Args) < 1 {
+		panic("incorrect args passed, please pass private key path")
+	}
 
-	priKpath := "/tmp/data/keys/de5d6591-645a-4366-a27e-bedc8d96ef6a/private.key"
-	// pubKpath := "/var/data/keys/602102b3-b5ca-488e-8fc3-efa72c9ac83d/public.key"
+	priKpath := os.Args[1]
+
+	fmt.Println("----------------------------------------------------------------")
+	fmt.Println(helpers.WFgB("private.der: "), priKpath)
+	fmt.Println("----------------------------------------------------------------")
 
 	data, derr := helpers.ReadBinary(priKpath)
 	if derr != nil {
 		panic(derr)
 	}
 
+	fmt.Printf("Raw PriKey: %0x\n", data)
+
 	privateKey, err := x509.ParseECPrivateKey(data)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(privateKey.PublicKey.Curve)
-	fmt.Println(privateKey.PublicKey.X)
-	fmt.Println(privateKey.PublicKey.Y)
-	fmt.Println(privateKey.D)
+	fmt.Println(helpers.WFgB("Curve: "), helpers.GFgB(privateKey.PublicKey.Curve.Params().Name))
+	fmt.Println(helpers.WFgB("PriKey.D: "), helpers.RFgB(privateKey.D))
+	fmt.Println(helpers.WFgB("PriKey By: "), helpers.RFgB(privateKey.D.Bytes()))
+	fmt.Println(helpers.WFgB("PriKey 0x: "), helpers.RFgB(fmt.Sprintf("%02x", privateKey.D)))
+	fmt.Println(helpers.WFgB("PubKey.X: "), helpers.YFgB(privateKey.PublicKey.X))
+	fmt.Println(helpers.WFgB("PubKey.Y: "), helpers.YFgB(privateKey.PublicKey.Y))
+	fmt.Println(helpers.WFgB("PubKey P: "), helpers.CFgB(privateKey.Params().P))
+	fmt.Println(helpers.WFgB("PubKey V: "), helpers.CFgB(privateKey.Public()))
 
-	fmt.Println(privateKey.Public())
 }

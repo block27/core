@@ -5,12 +5,19 @@ go 1.13
 require (
 	9fans.net/go v0.0.2 // indirect
 	github.com/Bowery/prompt v0.0.0-20190916142128-fa8279994f75 // indirect
+	github.com/VictoriaMetrics/fastcache v1.5.7 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 	github.com/alecthomas/gometalinter v3.0.0+incompatible // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
+	github.com/aristanetworks/goarista v0.0.0-20200131140622-c6473e3ed183 // indirect
 	github.com/awnumar/memguard v0.21.0
 	github.com/briandowns/spinner v1.8.0
+	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/btcsuite/btcutil v1.0.1
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/edunuzzi/go-bip44 v0.0.0-20190109211530-eb6b7decf5cc
+	github.com/ethereum/go-ethereum v1.9.10 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/fatih/gomodifytags v1.0.1 // indirect
 	github.com/go-critic/go-critic v0.4.1 // indirect
@@ -31,8 +38,9 @@ require (
 	github.com/mdempsky/gocode v0.0.0-20191202075140-939b4a677f2f // indirect
 	github.com/mgechev/revive v1.0.1 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/pelletier/go-toml v1.6.0 // indirect
-	github.com/pkg/errors v0.9.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/ramya-rao-a/go-outline v0.0.0-20181122025142-7182a932836a // indirect
 	github.com/rogpeppe/godef v1.1.1 // indirect
 	github.com/securego/gosec v0.0.0-20200106085552-9cb83e10afad // indirect
@@ -47,12 +55,13 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	github.com/tpng/gopkgs v0.0.0-20180428091733-81e90e22e204 // indirect
+	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/zmb3/goaddimport v0.0.0-20170810013102-4ab94a07ab86 // indirect
 	github.com/zmb3/gogetdoc v0.0.0-20190228002656-b37376c5da6a // indirect
 	go.etcd.io/bbolt v1.3.3
-	golang.org/x/crypto v0.0.0-20200109152110-61a87790db17
-	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1 // indirect
+	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	golang.org/x/tools v0.0.0-20200114012648-3b9e23528349 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/ini.v1 v1.51.1 // indirect

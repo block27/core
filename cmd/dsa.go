@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
@@ -68,10 +69,14 @@ func init() {
 	dsaVerifyCmd.MarkFlagRequired("file")
 	dsaVerifyCmd.MarkFlagRequired("signature")
 
-	// ImportPub flags  ...
+	// ExportPub flags ...
+	dsaExportPubCmd.Flags().StringVarP(&getIdentifier, "identifier", "i", "", "identifier required")
+	dsaExportPubCmd.MarkFlagRequired("identifier")
+
+	// ImportPub flags ...
 	dsaImportPubCmd.Flags().StringVarP(&importPubName, "name", "n", "", "name required")
 	dsaImportPubCmd.Flags().StringVarP(&importPubCurve, "curve", "c", "", "curve required")
-	dsaImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "p", "", "publicKey required")
+	dsaImportPubCmd.Flags().StringVarP(&importPubFile, "publicKey", "f", "", "publicKey required")
 }
 
 func dsaTypePanic() error {
@@ -194,7 +199,7 @@ var dsaSignCmd = &cobra.Command{
 			panic(derr)
 		}
 		// Sign the data with the private key used internally
-		sig, serr := key.Sign([]byte(file.GetSHA()))
+		sig, serr := key.Sign([]byte(file.GetSHA256()))
 		if serr != nil {
 			panic(serr)
 		}
@@ -214,7 +219,7 @@ var dsaSignCmd = &cobra.Command{
 
 		B.L.Printf("%s%s%s%s", h.WFgB("=== SHA("),
 			h.RFgB(signFilePath), h.WFgB(") = "),
-			h.GFgB(file.GetSHA()))
+			h.GFgB(file.GetSHA256()))
 
 		B.L.Printf("%s%s%s\n\t\tr[%d]=0x%x \n\t\ts[%d]=0x%x",
 			h.WFgB("=== Signature("),
@@ -228,6 +233,10 @@ var dsaVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify signed data",
 	PreRun: func(cmd *cobra.Command, args []string) {
+		if dsaType == "" {
+			panic(dsaTypePanic())
+		}
+
 		B.L.Printf("%s", h.CFgB("=== Keys[VERIFY]"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -249,8 +258,40 @@ var dsaVerifyCmd = &cobra.Command{
 			panic(derr)
 		}
 
-		B.L.Printf("%s%s", h.WFgB("=== Verified: "),
-			h.GFgB(key.Verify([]byte(file.GetSHA()), sig)))
+		B.L.Println("SHA1: ", file.GetSHA1())
+		B.L.Println("SHA256: ", file.GetSHA256())
+
+		var val string
+		res := key.Verify([]byte(file.GetSHA256()), sig)
+
+		if res {
+			val = h.GFgB("Verified OK")
+		} else {
+			val = h.RFgB("Verification Failure")
+		}
+
+		B.L.Printf("===> %s", val)
+	},
+}
+
+var dsaExportPubCmd = &cobra.Command{
+	Use:   "exportPub",
+	Short: "Export a public key",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		B.L.Printf("%s", h.CFgB("=== Keys[EXPORT:PUB]"))
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		key, e := ecdsa.GetECDSA(*B.C, getIdentifier)
+		if e != nil {
+			panic(e)
+		}
+
+		pubKey, err := base64.StdEncoding.DecodeString(key.Struct().PublicKeyB64)
+    if err != nil {
+      panic(err)
+    }
+
+		fmt.Println(string(pubKey))
 	},
 }
 

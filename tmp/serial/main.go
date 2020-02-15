@@ -26,9 +26,12 @@ func main() {
   ctx := gousb.NewContext()
   devices, _ := ctx.OpenDevices(findMPD26(product, vendor))
 
+  man, _ := devices[0].Manufacturer()
+  ser, _ := devices[0].SerialNumber()
+
   fmt.Println(devices[0])
-  fmt.Println(devices[0].Manufacturer())
-  fmt.Println(devices[0].SerialNumber())
+  fmt.Printf("Manufacturer: %s\n", man)
+  fmt.Printf("Serial Number: %s\n", ser)
 }
 
 func findMPD26(product, vendor uint16) func(desc *gousb.DeviceDesc) bool {

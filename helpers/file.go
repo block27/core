@@ -3,6 +3,7 @@ package helpers
 import (
 	"bufio"
 	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -19,15 +20,17 @@ type File interface {
 	GetPath() string
 
 	GetMD5() string
-	GetSHA() string
+	GetSHA1() string
+	GetSHA256() string
 }
 
 type file struct {
 	Body []byte
 	Path string
 
-	MD5 [16]byte
-	SHA [32]byte
+	MD5  [16]byte
+	SHA256  [32]byte
+	SHA1 [20]byte
 }
 
 // NewFile returns a new object of File interface
@@ -48,7 +51,8 @@ func NewFile(path string) (File, error)  {
 
 	f.Body = data
 	f.MD5 = md5.Sum(data)
-	f.SHA = sha256.Sum256(data)
+	f.SHA256 = sha256.Sum256(data)
+	f.SHA1 = sha1.Sum(data)
 
 	return f, nil
 }
@@ -63,8 +67,11 @@ func (f *file) GetPath() string {
 func (f *file) GetMD5() string {
 	return hex.EncodeToString(f.MD5[:])
 }
-func (f *file) GetSHA() string {
-	return fmt.Sprintf("%x", f.SHA[:])
+func (f *file) GetSHA256() string {
+	return fmt.Sprintf("%x", f.SHA256[:])
+}
+func (f *file) GetSHA1() string {
+	return fmt.Sprintf("%x", f.SHA1[:])
 }
 
 // ReadBinary ...

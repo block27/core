@@ -28,7 +28,7 @@ ifeq ($(ENVIRONMENT), develop)
 endif
 
 # Aliases
-all: configuration
+all: configuration build
 b: build
 t: test
 v: version
@@ -37,8 +37,9 @@ v: version
 .PHONY: all build build_all ctags test version
 
 build:
-	@go build -o bin/sigma-api pkg/api/main.go
-	@go build -o bin/sigma-cli pkg/cli/main.go
+	@echo "building [api, cli]..."
+	@go build -o bin/api pkg/api/main.go
+	@go build -o bin/cli pkg/cli/main.go
 
 build_all:
 	@GOOS=darwin GOARCH=amd64 go build -x -o bin/sigma-cli-$(VERSION)-osx-64 main.go
@@ -86,7 +87,7 @@ openssl_hardware_accelerated:
 	openssl speed -elapsed -evp aes-128-cbc
 
 openssl_check_signature:
-	openssl asn1parse -inform der -in signature.der
+	openssl asn1parse -inform der -in signature.der -dump
 
 openssl_check_ecdsa_private_key:
 	openssl ec -in private.pem -text -noout
@@ -99,6 +100,13 @@ openssl_verify:
 
 prepare_tests:
 	@rm -rf /tmp/data/keys
+
+tmp_encode_validation:
+	@openssl asn1parse -inform DER -dump -in tmp/private.der
+	@go run tmp/encoded/main.go tmp/private.der
+
+tmp_serial_information:
+	@go run tmp/serial/main.go
 
 setup_machine:
 	mkdir -p /tmp/data

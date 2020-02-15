@@ -5,25 +5,20 @@ import (
 )
 
 func TestNewFile(t *testing.T) {
-	file, err := NewFile("../data/hello.txt")
+	file, err := NewFile("../data/hello")
 	if err != nil {
 		t.Fail()
 	}
 
-	if file.GetPath() != "../data/hello.txt" {
+	if file.GetPath() != "../data/hello" {
 		t.Fail()
 	}
 
-
-	if string(file.GetBody()) == "hello" {
+	if file.GetMD5() != "5d41402abc4b2a76b9719d911017c592" {
 		t.Fail()
 	}
 
-	if file.GetMD5() != "b1946ac92492d2347c6235b4d2611184" {
-		t.Fail()
-	}
-
-	if file.GetSHA() != "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03" {
+	if file.GetSHA256() != "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824" {
 		t.Fail()
 	}
 }
