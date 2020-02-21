@@ -111,6 +111,24 @@ func exportPrivateKeytoEncryptedPEM(sec *ecdsa.PrivateKey, password []byte) []by
 // JCBJ8wQkMsKMxbtAWGeUgXydoo7JCiVOv+gG2luFt54=
 // -----------------------------------------------------------------------------
 
+// BaseMD5 ...
+func BaseMD5(data []byte) string {
+	md5sum := md5.Sum(data)
+	hexarray := make([]string, len(md5sum))
+
+	for i, c := range md5sum {
+		hexarray[i] = hex.EncodeToString([]byte{c})
+	}
+
+	return strings.Join(hexarray, ":")
+}
+
+// BaseSHA256 ...
+func BaseSHA256(data []byte) string {
+	sha256sum := sha256.Sum256(data)
+	return base64.RawStdEncoding.EncodeToString(sha256sum[:])
+}
+
 // FingerprintMD5 - returns the user presentation of the key's fingerprint
 // as described by RFC 4716 section 4.
 func FingerprintMD5(publicKey *ecdsa.PublicKey) string {

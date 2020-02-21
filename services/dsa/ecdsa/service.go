@@ -100,7 +100,7 @@ func NewECDSA(c config.Reader, name string, curve string) (KeyAPI, error) {
 		return nil, err
 	}
 
-	// Grab the public key
+	// Extract the public key
 	pub := &pri.PublicKey
 
 	// PEM #1 - encoding

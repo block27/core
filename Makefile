@@ -19,14 +19,6 @@ GO_TEST_DIRS := $(shell \
 VERSION = `cat VERSION`
 PACKAGE = github.com/amanelis/bespin
 
-# OK to be modified
-ENVIRONMENT?=develop
-NAMESPACE?=default
-
-ifeq ($(ENVIRONMENT), develop)
-	NAMESPACE = develop
-endif
-
 # Aliases
 all: configuration build
 b: build
@@ -116,23 +108,23 @@ version:
 	@echo ${VERSION}
 
 update:
-	govendor add +external
-	govendor update -tree
+	@govendor add +external
+	@govendor update -tree
 
 # TESTING ----------------------------------------------------------------------
 test: test_richgo
 
 test_coverage_func:
-	@go tool cover -func=coverage.out
+	@ENVIRONMENT=test go tool cover -func=coverage.out
 
 test_coverage_html:
-	@go tool cover -html=coverage.out
+	@ENVIRONMENT=test go tool cover -html=coverage.out
 
 test_golang: prepare_tests
-	@go test -v ./... -cover -coverprofile=coverage.out #-bench=.
+	@ENVIRONMENT=test go test -v ./... -cover -coverprofile=coverage.out #-bench=.
 
 test_gotest: prepare_tests
-	@gotest -v ./... -cover -coverprofile=coverage.out #-bench=.
+	@ENVIRONMENT=test gotest -v ./... -cover -coverprofile=coverage.out #-bench=.
 
 test_richgo: prepare_tests
-	@richgo test -v ./... -cover -coverprofile=coverage.out #-bench=.
+	@ENVIRONMENT=test richgo test -v ./... -cover -coverprofile=coverage.out #-bench=.

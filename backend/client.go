@@ -53,7 +53,7 @@ func NewBackend() (*Backend, error) {
 		return nil, err
 	}
 
-	bDb, err := bbolt.NewDB("/tmp/botldb")
+	bDb, err := bbolt.NewDB(fmt.Sprintf("%s/botldb", c.GetString("paths.base")))
 	if err != nil {
 		return nil, err
 	}
