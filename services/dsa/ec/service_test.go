@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/amanelis/core-zero/config"
-	// "github.com/amanelis/core-zero/helpers"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var Config config.Reader
@@ -46,12 +46,20 @@ func TestNewEC(t *testing.T) {
 		t.Fail()
 	}
 
+	// p1Key, _ := k.getPrivateKey()
+	// p2Key, _ := p1Key.MarshalPKCS1PrivateKeyPEM()
+	// fmt.Println(string(p2Key))
+	//
+	// p1Pub, _ := k.getPublicKey()
+	// p2Pub, _ := p1Pub.MarshalPKIXPublicKeyPEM()
+	// fmt.Println(string(p2Pub))
+
 	if k == nil {
 		t.Fail()
 	}
 
+	spew.Dump(k)
 
-	fmt.Println(k)
 
 	// if !reflect.DeepEqual(k, obj) {
 	// 	t.Fatalf("structs don't equal?")

@@ -14,6 +14,7 @@ require (
 	github.com/briandowns/spinner v1.8.0
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btcutil v1.0.1
+	github.com/davecgh/go-spew v1.1.1
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/edunuzzi/go-bip44 v0.0.0-20190109211530-eb6b7decf5cc

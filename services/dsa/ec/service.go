@@ -2,6 +2,7 @@ package ec
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -49,11 +50,8 @@ type key struct {
 
 	CreatedAt time.Time
 
-	PrivateKeyDER []byte
-	PrivateKeyPEM []byte
-
-	PublicKeyDER []byte
-	PublicKeyPEM []byte
+	privateKeyPEM []byte
+	publicKeyPEM []byte
 }
 
 // NewEC ...
@@ -74,26 +72,15 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 		return nil, err
 	}
 
-	pubDer, err := pri.MarshalPKIXPublicKeyDER()
+	pubPemBytes, err := pri.MarshalPKIXPublicKeyPEM()
 	if err != nil {
 		return nil, err
 	}
 
-	pubPem, err := pri.MarshalPKIXPublicKeyPEM()
+	priPemBytes, err := pri.MarshalPKCS1PrivateKeyPEM()
 	if err != nil {
 		return nil, err
 	}
-
-	priPem, err := pri.MarshalPKCS1PrivateKeyPEM()
-	if err != nil {
-		return nil, err
-	}
-
-	priDer, err := pri.MarshalPKCS1PrivateKeyDER()
-	if err != nil {
-		return nil, err
-	}
-
 
 	// Create the key struct object
 	key := &key{
@@ -102,24 +89,41 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 		Slug:            helpers.NewHaikunator().Haikunate(),
 		KeyType:         typ,
 		Status:          dsa.StatusActive,
-		FingerprintMD5:  encodings.BaseMD5(pubPem),
-		FingerprintSHA:  encodings.BaseSHA256(pubPem),
+		FingerprintMD5:  encodings.BaseMD5(pubPemBytes),
+		FingerprintSHA:  encodings.BaseSHA256(pubPemBytes),
 		CreatedAt:       time.Now(),
-		PrivateKeyDER: 	 priDer,
-		PrivateKeyPEM: 	 priPem,
-		PublicKeyDER:    pubDer,
-		PublicKeyPEM:    pubPem,
+		privateKeyPEM: 	 priPemBytes,
+		publicKeyPEM:    pubPemBytes,
 	}
 
 	// Write the entire key object to FS
-	// if err := key.writeToFS(c, priEnc, pubEnc); err != nil {
-	// 	return nil, err
-	// }
+	if err := key.writeToFS(c, priPemBytes, pubPemBytes); err != nil {
+		return nil, err
+	}
 
 	return key, nil
 }
 
 func (k *key) writeToFS(c config.Reader, pri []byte, pub []byte) error {
+	// Create the keys root directory based on it's FilePointer method
+	dirPath := fmt.Sprintf("%s/ec/%s", c.GetString("paths.keys"), k.FilePointer())
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, os.ModePerm)
+	}
+
+	// Temporary and will need to be encrypted / decrypted
+	pemPath := fmt.Sprintf("%s/%s", dirPath, "key.pem")
+
+	if pri != nil {
+		privatekeyFile, err := os.Create(pemPath)
+		if err != nil {
+			return err
+		}
+
+		privatekeyFile.Write(pri)
+		privatekeyFile.Close()
+	}
+
 	return nil
 }
 
@@ -138,7 +142,7 @@ func (k *key) getArtSignature() string {
 }
 
 func (k *key) getPrivateKey() (openssl.PrivateKey, error) {
-	key, err := openssl.LoadPrivateKeyFromPEM(k.PrivateKeyPEM)
+	key, err := openssl.LoadPrivateKeyFromPEM(k.privateKeyPEM)
 	if err != nil {
 		return nil, err
 	}
@@ -147,18 +151,12 @@ func (k *key) getPrivateKey() (openssl.PrivateKey, error) {
 }
 
 func (k *key) getPublicKey() (openssl.PublicKey, error) {
-	return nil, nil
-	// hex, err := hex.DecodeString(k.publicKey)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// key, err := openssl.LoadPublicKeyFromPEM(hex)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// return key, nil
+	key, err := openssl.LoadPublicKeyFromPEM(k.publicKeyPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }
 
 func (k *key) Sign([]byte) ([]byte, error) {
