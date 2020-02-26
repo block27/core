@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/block27/core-zero/crypto"
+	"github.com/amanelis/core-zero/crypto"
 	"golang.org/x/crypto/ssh"
 )
 

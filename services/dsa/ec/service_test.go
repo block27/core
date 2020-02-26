@@ -6,8 +6,8 @@ import (
 	// "reflect"
 	"testing"
 
-	"github.com/block27/core-zero/config"
-	// "github.com/block27/core-zero/helpers"
+	"github.com/amanelis/core-zero/config"
+	// "github.com/amanelis/core-zero/helpers"
 )
 
 var Config config.Reader

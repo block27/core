@@ -1,4 +1,4 @@
-module github.com/block27/core-zero
+module github.com/amanelis/core-zero
 
 go 1.13
 

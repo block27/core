@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/block27/core-zero/helpers"
+	"github.com/amanelis/core-zero/helpers"
 )
 
 func TestSHADummy(t *testing.T) {

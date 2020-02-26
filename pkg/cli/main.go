@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/block27/core-zero/backend"
-	c "github.com/block27/core-zero/cmd"
+	"github.com/amanelis/core-zero/backend"
+	c "github.com/amanelis/core-zero/cmd"
 	m "github.com/awnumar/memguard"
 )
 
