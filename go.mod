@@ -1,4 +1,4 @@
-module github.com/amanelis/bespin
+module github.com/block27/core-zero
 
 go 1.13
 

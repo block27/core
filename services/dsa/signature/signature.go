@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	h "github.com/amanelis/bespin/helpers"
+	h "github.com/block27/core-zero/helpers"
 )
 
 // Signature - this struct is unique and must not be modified. ASN1 package

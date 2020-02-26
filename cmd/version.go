@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	h "github.com/amanelis/bespin/helpers"
+	h "github.com/block27/core-zero/helpers"
 	"github.com/spf13/cobra"
 )
 

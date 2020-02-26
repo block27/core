@@ -4,7 +4,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	"github.com/amanelis/bespin/helpers"
+	"github.com/block27/core-zero/helpers"
 	"github.com/spacemonkeygo/openssl"
 	guuid "github.com/google/uuid"
 )

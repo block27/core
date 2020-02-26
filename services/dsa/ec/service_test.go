@@ -3,9 +3,11 @@ package ec
 import (
 	"fmt"
 	"os"
+	// "reflect"
 	"testing"
 
-	"github.com/amanelis/bespin/config"
+	"github.com/block27/core-zero/config"
+	// "github.com/block27/core-zero/helpers"
 )
 
 var Config config.Reader
@@ -39,8 +41,21 @@ func TestNewEC(t *testing.T) {
 	}
 
 	// Valid
-	_, err := NewEC(Config, "test-key-1", "prime256v1")
+	k, err := NewEC(Config, "test-key-1", "prime256v1")
 	if err != nil {
 		t.Fail()
 	}
+
+	if k == nil {
+		t.Fail()
+	}
+
+
+	fmt.Println(k)
+
+	// if !reflect.DeepEqual(k, obj) {
+	// 	t.Fatalf("structs don't equal?")
+	// }
+
+
 }

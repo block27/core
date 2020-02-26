@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/amanelis/bespin/backend"
-	c "github.com/amanelis/bespin/cmd"
+	"github.com/block27/core-zero/backend"
+	c "github.com/block27/core-zero/cmd"
 	m "github.com/awnumar/memguard"
 )
 

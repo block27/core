@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	// jwt "github.com/dgrijalva/jwt-go"
-	"github.com/amanelis/bespin/backend"
-	"github.com/amanelis/bespin/services/dsa/ecdsa"
+	"github.com/block27/core-zero/backend"
+	"github.com/block27/core-zero/services/dsa/ecdsa"
 )
 
 var (

@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/amanelis/bespin/config"
-	"github.com/amanelis/bespin/crypto"
-	h "github.com/amanelis/bespin/helpers"
-	"github.com/amanelis/bespin/services/bbolt"
-	"github.com/amanelis/bespin/services/serial"
+	"github.com/block27/core-zero/config"
+	"github.com/block27/core-zero/crypto"
+	h "github.com/block27/core-zero/helpers"
+	"github.com/block27/core-zero/services/bbolt"
+	"github.com/block27/core-zero/services/serial"
 
 	"github.com/google/gousb"
 	"github.com/awnumar/memguard"

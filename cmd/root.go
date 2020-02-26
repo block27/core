@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/amanelis/bespin/backend"
-	h "github.com/amanelis/bespin/helpers"
+	"github.com/block27/core-zero/backend"
+	h "github.com/block27/core-zero/helpers"
 	"github.com/spf13/cobra"
 )
 

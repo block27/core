@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	h "github.com/amanelis/bespin/helpers"
-	"github.com/amanelis/bespin/services/dsa/ecdsa"
-	"github.com/amanelis/bespin/services/dsa/signature"
+	h "github.com/block27/core-zero/helpers"
+	"github.com/block27/core-zero/services/dsa/ecdsa"
+	"github.com/block27/core-zero/services/dsa/signature"
 )
 
 var (

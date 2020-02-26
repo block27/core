@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/amanelis/bespin/helpers"
+	"github.com/block27/core-zero/helpers"
 )
 
 func main() {

@@ -132,6 +132,7 @@ func LoadConfig(defaultSetup DefaultSettings) (Reader, error) {
 		os.MkdirAll(hostKeysPath, os.ModePerm)
 
 		// mkdir all key paths
+		os.MkdirAll(fmt.Sprintf("%s/%s", hostKeysPath, "ec"), os.ModePerm)
 		os.MkdirAll(fmt.Sprintf("%s/%s", hostKeysPath, "ecdsa"), os.ModePerm)
 		os.MkdirAll(fmt.Sprintf("%s/%s", hostKeysPath, "eddsa"), os.ModePerm)
 		os.MkdirAll(fmt.Sprintf("%s/%s", hostKeysPath, "rsa"), os.ModePerm)

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/amanelis/bespin/helpers"
+	"github.com/block27/core-zero/helpers"
 )
 
 const (

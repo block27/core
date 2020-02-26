@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/amanelis/bespin/config"
-	"github.com/amanelis/bespin/helpers"
+	"github.com/block27/core-zero/config"
+	"github.com/block27/core-zero/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
