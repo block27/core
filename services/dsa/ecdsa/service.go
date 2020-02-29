@@ -35,6 +35,7 @@ import (
 // KeyAPI main api for defining Key behavior and functions
 type KeyAPI interface {
 	FilePointer() string
+	KeyID() guuid.UUID
 	Struct() *key
 
 	getArtSignature() string
@@ -141,7 +142,7 @@ func GetECDSA(c config.Reader, fp string) (KeyAPI, error) {
 
 	data, err := helpers.ReadFile(fmt.Sprintf("%s/obj.bin", dirPath))
 	if err != nil {
-		return (*key)(nil), eer.NewKeyObjtError("invalid key objt")
+		return (*key)(nil), eer.NewKeyObjtError("invalid key obj")
 	}
 
 	obj, err := keyFromGOB64(data)
@@ -311,6 +312,11 @@ func (k *key) writeToFS(c config.Reader, pri *ecdsa.PrivateKey, pub *ecdsa.Publi
 	}
 
 	return nil
+}
+
+// KeyID ...
+func (k *key) KeyID() guuid.UUID {
+	return k.GID
 }
 
 // FilePointer returns a string that will represent the path the key can be

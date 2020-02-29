@@ -504,6 +504,12 @@ func TestFilePointer(t *testing.T) {
 	}
 }
 
+func TestKeyID(t *testing.T) {
+	if Key.FilePointer() != Key.KeyID().String() || Key.GID != Key.KeyID() {
+		t.Fail()
+	}
+}
+
 func TestSignandVerifyHuman(t *testing.T) {
 	msg := "hello, world"
 	hash := sha256.Sum256([]byte(msg))

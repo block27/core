@@ -205,12 +205,6 @@ func (b *Backend) HardwareAuthenticate() error {
 	return nil
 }
 
-func findMPD26(product, vendor uint16) func(desc *gousb.DeviceDesc) bool {
-  return func(desc *gousb.DeviceDesc) bool {
-    return desc.Product == gousb.ID(product) && desc.Vendor == gousb.ID(vendor)
-  }
-}
-
 // locateDevice ... temporary fix, but need to  find the AES device to  starts
 func (b *Backend) locateDevice() (string, error) {
 	data, err := ioutil.ReadDir("/dev")

@@ -18,6 +18,8 @@ var Curves = []string{
 	"secp521r1",
 }
 
+var Key *key
+
 func init() {
 	os.Setenv("ENVIRONMENT", "test")
 
@@ -30,7 +32,19 @@ func init() {
 		panic(fmt.Errorf("test [environment] is not in [test] mode"))
 	}
 
+	k1, err := NewEC(c, "test-key-0", "prime256v1")
+	if err != nil {
+		panic(err)
+	}
+
+	Key = k1.Struct()
 	Config = c
+}
+
+func TestKeyID(t *testing.T) {
+	if Key.FilePointer() != Key.KeyID().String() || Key.Attributes.GID != Key.KeyID() {
+		t.Fail()
+	}
 }
 
 func TestNewEC(t *testing.T) {
@@ -43,27 +57,54 @@ func TestNewEC(t *testing.T) {
 	// Valid
 	k, err := NewEC(Config, "test-key-1", "prime256v1")
 	if err != nil {
-		t.Fail()
+		t.Fatalf(err.Error())
 	}
 
-	// p1Key, _ := k.getPrivateKey()
-	// p2Key, _ := p1Key.MarshalPKCS1PrivateKeyPEM()
-	// fmt.Println(string(p2Key))
-	//
-	// p1Pub, _ := k.getPublicKey()
-	// p2Pub, _ := p1Pub.MarshalPKIXPublicKeyPEM()
-	// fmt.Println(string(p2Pub))
+	if k.GetAttributes().KeyType != "ec.privateKey <==> prime256v1" {
+		t.Fatalf(k.GetAttributes().KeyType)
+	}
 
 	if k == nil {
 		t.Fail()
 	}
+}
+
+
+
+func TestNewECDSA(t *testing.T) {
+	// Invalid curve
+	_, q := NewEC(Config, "test-key-1", "prim56v1")
+	if q == nil {
+		t.Fatal("invalid curve")
+	}
+
+	// Valid
+	k, err := NewEC(Config, "test-key-1", "prime256v1")
+	if err != nil {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k, "privateKey", "prime256v1")
+
+	// Check for filesystem keys are present
+	CheckFullKeyFileObjects(t, Config, k, "NewECDSA")
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
+		k.FilePointer()))
+}
+
+
+
+func TestGetEC(t *testing.T) {
+	// Valid
+	k, err := GetEC(Config, Key.FilePointer())
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 
 	spew.Dump(k)
 
-
-	// if !reflect.DeepEqual(k, obj) {
-	// 	t.Fatalf("structs don't equal?")
-	// }
-
-
+	if k == nil {
+		t.Fail()
+	}
 }
