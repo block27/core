@@ -69,8 +69,6 @@ func TestNewEC(t *testing.T) {
 	}
 }
 
-
-
 func TestNewECDSA(t *testing.T) {
 	// Invalid curve
 	_, q := NewEC(Config, "test-key-1", "prim56v1")

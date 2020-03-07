@@ -9,13 +9,14 @@ import (
 
 // NewHMACKey generates a random 256-bit secret key for HMAC use.
 // Because key generation is critical, it panics if the source of randomness fails.
-func NewHMACKey() *[32]byte {
+func NewHMACKey() (*[32]byte, error) {
 	key := &[32]byte{}
-	_, err := io.ReadFull(rand.Reader, key[:])
-	if err != nil {
-		panic(err)
+
+	if _, err := io.ReadFull(rand.Reader, key[:]); err != nil {
+		return nil, err
 	}
-	return key
+
+	return key, nil
 }
 
 // GenerateHMAC produces a symmetric signature using a shared secret key.
@@ -23,7 +24,6 @@ func GenerateHMAC(data []byte, key *[32]byte) []byte {
 	h := hmac.New(sha512.New512_256, key[:])
 	h.Write(data)
 	return h.Sum(nil)
-
 }
 
 // CheckHMAC securely checks the supplied MAC against a message using the shared secret key.
