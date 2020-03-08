@@ -1,9 +1,13 @@
 package ec
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/user"
+	"runtime"
 
 	"github.com/amanelis/core-zero/config"
 	"github.com/amanelis/core-zero/helpers"
@@ -214,7 +218,41 @@ func (k *key) Struct() *key {
 }
 
 func (k *key) getArtSignature() string {
-	return ""
+	usr, err := user.Current()
+	if err != nil {
+		return "--- path err ---"
+	}
+
+	var pyPath string
+
+	if runtime.GOOS == "darwin" {
+		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
+	} else if runtime.GOOS == "linux" {
+		pyPath = "/usr/bin/python"
+	}
+
+	cmd := exec.Command(
+		pyPath,
+		"tmp/drunken_bishop.py",
+		"--mode",
+		"sha256",
+		k.GetAttributes().FingerprintSHA,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "--- run err ---"
+	}
+
+	outStr, outErr := string(stdout.Bytes()), string(stderr.Bytes())
+	if outErr != "" {
+		return fmt.Sprintf("--- %s ---", outErr)
+	}
+
+	return outStr
 }
 
 func (k *key) getPrivateKey() (openssl.PrivateKey, error) {
