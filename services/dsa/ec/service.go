@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"time"
 
 	"github.com/amanelis/core-zero/config"
 	"github.com/amanelis/core-zero/helpers"
@@ -42,7 +41,6 @@ type key struct {
 
 // NewEC ...
 func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
-	// Validate the type of curve passed
 	_, cv, ol, err := dsa.GetCurve(curve)
 	if err != nil {
 		return nil, err
@@ -73,7 +71,7 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 			Status:          dsa.StatusActive,
 			FingerprintMD5:  encodings.BaseMD5(pubPemBytes),
 			FingerprintSHA:  encodings.BaseSHA256(pubPemBytes),
-			CreatedAt:       time.Now(),
+			CreatedAt:       helpers.CreatedAtNow(),
 		},
 		privateKeyPEM: 	 priPemBytes,
 		publicKeyPEM:    pubPemBytes,

@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"sync"
-	"time"
 
 	guuid "github.com/google/uuid"
 )
@@ -32,7 +31,7 @@ type KeyAttributes struct {
 	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
 	FingerprintSHA string // Real fingerprint in  SHA256  of the key
 
-	CreatedAt time.Time
+	CreatedAt string
 }
 
 // KAToGOB64 takes a pointer to an existing key and return it's entire body

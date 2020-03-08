@@ -112,7 +112,7 @@ update:
 	@govendor update -tree
 
 # TESTING ----------------------------------------------------------------------
-test: test_richgo
+test: prepare_tests test_richgo
 
 test_coverage_func:
 	@ENVIRONMENT=test go tool cover -func=coverage.out

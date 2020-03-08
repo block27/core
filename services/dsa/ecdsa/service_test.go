@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/amanelis/core-zero/config"
@@ -45,6 +46,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	spew.Dump(k1)
 
 	Key = k1.Struct()
 	Config = c

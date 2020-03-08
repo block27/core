@@ -3,7 +3,7 @@ package ec
 import (
 	"fmt"
 	"os"
-	// "reflect"
+	"reflect"
 	"testing"
 
 	"github.com/amanelis/core-zero/config"
@@ -37,14 +37,10 @@ func init() {
 		panic(err)
 	}
 
+	spew.Dump(k1)
+
 	Key = k1.Struct()
 	Config = c
-}
-
-func TestKeyID(t *testing.T) {
-	if Key.FilePointer() != Key.KeyID().String() || Key.Attributes.GID != Key.KeyID() {
-		t.Fail()
-	}
 }
 
 func TestNewEC(t *testing.T) {
@@ -60,38 +56,11 @@ func TestNewEC(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	if k.GetAttributes().KeyType != "ec.privateKey <==> prime256v1" {
-		t.Fatalf(k.GetAttributes().KeyType)
-	}
-
-	if k == nil {
-		t.Fail()
-	}
-}
-
-func TestNewECDSA(t *testing.T) {
-	// Invalid curve
-	_, q := NewEC(Config, "test-key-1", "prim56v1")
-	if q == nil {
-		t.Fatal("invalid curve")
-	}
-
-	// Valid
-	k, err := NewEC(Config, "test-key-1", "prime256v1")
-	if err != nil {
-		t.Fail()
-	}
-
 	AssertStructCorrectness(t, k, "privateKey", "prime256v1")
-
-	// Check for filesystem keys are present
-	CheckFullKeyFileObjects(t, Config, k, "NewECDSA")
-
-	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
+	CheckFullKeyFileObjects(t, Config, k, "NewEC")
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
 		k.FilePointer()))
 }
-
-
 
 func TestGetEC(t *testing.T) {
 	// Valid
@@ -100,9 +69,150 @@ func TestGetEC(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	spew.Dump(k)
+	if !reflect.DeepEqual(k.GetAttributes(), Key.GetAttributes()) {
+		t.Fail()
+	}
 
-	if k == nil {
+	if !reflect.DeepEqual(k, Key) {
+		t.Fail()
+	}
+
+	gPk1, err := k.getPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPk2, err := Key.getPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp1, err := k.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp2, err := Key.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPk1, gPk2) {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPp1, gPp2) {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k, "privateKey", "prime256v1")
+	CheckFullKeyFileObjects(t, Config, k, "NewEC")
+}
+
+func TestGetPrivateKey(t *testing.T) {
+	// Test from New -------------------------------------------------------------
+	k1, err := NewEC(Config, "test-key-1", "prime256v1")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	gPk1, err := k1.getPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp1, err := gPk1.MarshalPKCS1PrivateKeyPEM()
+	if err != nil {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k1, "privateKey", "prime256v1")
+	CheckFullKeyFileObjects(t, Config, k1, "NewEC")
+
+	// Test from Get -------------------------------------------------------------
+	k2, err := GetEC(Config, k1.FilePointer())
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	gPk2, err := k2.getPrivateKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp2, err := gPk2.MarshalPKCS1PrivateKeyPEM()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPk1, gPk2) {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPp1, gPp2) {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k2, "privateKey", "prime256v1")
+	CheckFullKeyFileObjects(t, Config, k2, "NewEC")
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+		k1.FilePointer()))
+}
+
+func TestGetPublicKey(t *testing.T) {
+	// Test from New -------------------------------------------------------------
+	k1, err := NewEC(Config, "test-key-1", "prime256v1")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	gPk1, err := k1.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp1, err := gPk1.MarshalPKIXPublicKeyPEM()
+	if err != nil {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k1, "privateKey", "prime256v1")
+	CheckFullKeyFileObjects(t, Config, k1, "NewEC")
+
+	// Test from Get -------------------------------------------------------------
+	k2, err := GetEC(Config, k1.FilePointer())
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	gPk2, err := k2.getPublicKey()
+	if err != nil {
+		t.Fail()
+	}
+
+	gPp2, err := gPk2.MarshalPKIXPublicKeyPEM()
+	if err != nil {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPk1, gPk2) {
+		t.Fail()
+	}
+
+	if !reflect.DeepEqual(gPp1, gPp2) {
+		t.Fail()
+	}
+
+	AssertStructCorrectness(t, k2, "privateKey", "prime256v1")
+	CheckFullKeyFileObjects(t, Config, k2, "NewEC")
+
+	ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+		k1.FilePointer()))
+}
+
+func TestKeyID(t *testing.T) {
+	if Key.FilePointer() != Key.KeyID().String() || Key.Attributes.GID != Key.KeyID() {
 		t.Fail()
 	}
 }
