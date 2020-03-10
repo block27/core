@@ -7,6 +7,12 @@ import (
 	"fmt"
 	"sync"
 
+	"os/exec"
+	"os/user"
+	"runtime"
+
+	"github.com/amanelis/core-zero/helpers"
+
 	guuid "github.com/google/uuid"
 )
 
@@ -32,6 +38,65 @@ type KeyAttributes struct {
 	FingerprintSHA string // Real fingerprint in  SHA256  of the key
 
 	CreatedAt string
+}
+
+// NewKA ...
+func NewKA() *KeyAttributes {
+	return &KeyAttributes{
+		GID: 						 GenerateUUID(),
+		Slug:            helpers.NewHaikunator().Haikunate(),
+		Status:          StatusPending,
+		CreatedAt:       helpers.CreatedAtNow(),
+	}
+}
+
+// ArtSignature generates the ssh-keygen style pubkey art
+func (ka *KeyAttributes) ArtSignature() string {
+	usr, err := user.Current()
+	if err != nil {
+		return "--- path err ---"
+	}
+
+	var pyPath string
+
+	if runtime.GOOS == "darwin" {
+		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
+	} else if runtime.GOOS == "linux" {
+		pyPath = "/usr/bin/python"
+	}
+
+	cmd := exec.Command(
+		pyPath,
+		"tmp/drunken_bishop.py",
+		"--mode",
+		"sha256",
+		ka.FingerprintSHA,
+	)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "--- run err ---"
+	}
+
+	if outErr := string(stderr.Bytes()); outErr != "" {
+		return fmt.Sprintf("--- %s ---", outErr)
+	}
+
+	return string(stdout.Bytes())
+}
+
+// FilePointer returns the objects FilePointer, important in locating the
+// key files
+func (ka *KeyAttributes) FilePointer() string {
+	return ka.GID.String()
+}
+
+// KeyID ...
+func (ka *KeyAttributes) KeyID() guuid.UUID {
+	return ka.GID
 }
 
 // KAToGOB64 takes a pointer to an existing key and return it's entire body

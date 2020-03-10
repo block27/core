@@ -16,6 +16,10 @@ const (
 	// StatusArchived is for keys that are "soft" deleted and no longer in use
 	StatusArchived = "archive"
 
+	// StatusPending is for when a key has been created, but no encryption methods
+	// have been set to the key
+	StatusPending = "pending"
+
 	// Public string constant for type setting
 	Public = "public"
 
@@ -23,14 +27,13 @@ const (
 	Private = "private"
 )
 
-// EC ...
-type EC struct { }
-
 // GetCurve checks the string param matched and should return a valid ec curve
 func GetCurve(curve string) (elliptic.Curve, string, openssl.EllipticCurve, error) {
 	switch curve {
 	case "prime256v1": // prime256v1: X9.62/SECG curve over a 256 bit prime field
 		return elliptic.P256(), "prime256v1", openssl.Prime256v1, nil
+	// case "secp224r1":
+	// 	return elliptic.P224(), "secp224r1", openssl.Secp224r1, nil
 	case "secp384r1": // secp384r1: NIST/SECG curve over a 384 bit prime field
 		return elliptic.P384(), "secp384r1", openssl.Secp384r1, nil
 	case "secp521r1": // secp521r1: NIST/SECG curve over a 521 bit prime field

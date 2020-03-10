@@ -3,10 +3,12 @@ package ec
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/amanelis/core-zero/config"
 	"github.com/amanelis/core-zero/helpers"
+	"github.com/amanelis/core-zero/services/dsa"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,11 +23,15 @@ func AssertStructCorrectness(t *testing.T, k KeyAPI, o string, c string) {
 	assert.NotNil(t, k.GetAttributes().FingerprintMD5)
 	assert.NotNil(t, k.GetAttributes().FingerprintSHA)
 
-	assert.NotNil(t, k.Struct().privateKeyPEM)
+	if strings.Contains(k.GetAttributes().KeyType, dsa.Private) {
+		assert.NotNil(t, k.Struct().privateKeyPEM)
+		assert.Equal(t, dsa.ToString(c, o), k.GetAttributes().KeyType)
+	}
+
 	assert.NotNil(t, k.Struct().publicKeyPEM)
 
 	assert.Equal(t, "active", k.GetAttributes().Status)
-	assert.Equal(t, fmt.Sprintf("ec.%s <==> %s", o, c), k.GetAttributes().KeyType)
+
 }
 
 // AssertStructNilness ...
@@ -62,7 +68,7 @@ func CheckFullKeyFileObjects(t *testing.T, c config.Reader, k KeyAPI, f string) 
 
 	// Check for filesystem keys are present
 	checkKeyFileObjects(t, f,
-		fmt.Sprintf("%s/ec/%s", c.GetString("paths.keys"), k.FilePointer()))
+		fmt.Sprintf("%s/ec/%s", c.GetString("paths.keys"), k.GetAttributes().FilePointer()))
 }
 
 func checkKeyFileObjects(t *testing.T, f string, p string) {

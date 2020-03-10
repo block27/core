@@ -62,110 +62,121 @@ func TestNewECDSABlank(t *testing.T) {
 	AssertStructNilness(t, k)
 }
 
-func TestImportPublicECDSA256v1(t *testing.T) {
-	pub, err := helpers.NewFile("../../../data/keys/ecdsa/prime256v1-pubkey.pem")
-	if err != nil {
-		t.Fail()
-	}
+func TestImportPublicECDSA(t *testing.T) {
+	t.Parallel()
 
-	k1, e := ImportPublicECDSA(Config, "prime256v1-name", "prime256v1", pub.GetBody())
-	if e != nil {
-		t.Fail()
-	}
+	t.Run("import:prime256v1", func(t *testing.T) {
+		t.Parallel()
 
-	AssertStructCorrectness(t, k1, "PublicKey", "prime256v1")
+		pub, err := helpers.NewFile("../../../data/keys/ecdsa/prime256v1-pubkey.pem")
+		if err != nil {
+			t.Fail()
+		}
 
-	if k1.Struct().Name != "prime256v1-name" {
-		t.Fail()
-	}
+		// Check validity / only should be done in 1 test case
+		// -------------------------------------------------------------------------
+		// Empty "name"
+		_, e := ImportPublicECDSA(Config, "", "secp521r1", pub.GetBody())
+		if e == nil {
+			t.Fatal(e)
+		}
 
-	if k1.Struct().KeyType != "ecdsa.PublicKey <==> prime256v1" {
-		t.Fail()
-	}
+		// Empty "curve"
+		_, r := ImportPublicECDSA(Config, "some-name", "", pub.GetBody())
+		if r == nil {
+			t.Fatal(r)
+		}
 
-	t.Logf("successfully imported [prime256v1-pubkey] [%s]", k1.FilePointer())
+		// Invalid curve
+		_, p := ImportPublicECDSA(Config, "some-name", "junk1024r1", pub.GetBody())
+		if p == nil {
+			t.Fatal(p)
+		}
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
-		k1.FilePointer()))
-}
+		// Invalid pub
+		_, j := ImportPublicECDSA(Config, "some-name", "secp521r1", []byte("junk..."))
+		if j == nil {
+			t.Fatal(j)
+		}
 
-func TestImportPublicECDSA384r1(t *testing.T) {
-	pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp384r1-pubkey.pem")
-	if err != nil {
-		t.Fail()
-	}
+		k1, e := ImportPublicECDSA(Config, "prime256v1-name", "prime256v1", pub.GetBody())
+		if e != nil {
+			t.Fail()
+		}
 
-	k1, e := ImportPublicECDSA(Config, "secp384r1-name", "secp384r1", pub.GetBody())
-	if e != nil {
-		t.Fail()
-	}
+		AssertStructCorrectness(t, k1, "PublicKey", "prime256v1")
 
-	AssertStructCorrectness(t, k1, "PublicKey", "secp384r1")
+		if k1.Struct().Name != "prime256v1-name" {
+			t.Fail()
+		}
 
-	if k1.Struct().Name != "secp384r1-name" {
-		t.Fail()
-	}
+		if k1.Struct().KeyType != "ecdsa.PublicKey <==> prime256v1" {
+			t.Fail()
+		}
 
-	if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp384r1" {
-		t.Fail()
-	}
+		t.Logf("successfully imported [prime256v1-pubkey] [%s]", k1.FilePointer())
 
-	t.Logf("successfully imported [secp384r1-pubkey] [%s]", k1.FilePointer())
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
+			k1.FilePointer()))
+	})
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
-		k1.FilePointer()))
-}
+	t.Run("import:secp384r1", func(t *testing.T) {
+		t.Parallel()
 
-func TestImportPublicECDSA512r1(t *testing.T) {
-	pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp521r1-pubkey.pem")
-	if err != nil {
-		t.Fail()
-	}
+		pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp384r1-pubkey.pem")
+		if err != nil {
+			t.Fail()
+		}
 
-	// Empty "name"
-	_, e := ImportPublicECDSA(Config, "", "secp521r1", pub.GetBody())
-	if e == nil {
-		t.Fatal(e)
-	}
+		k1, e := ImportPublicECDSA(Config, "secp384r1-name", "secp384r1", pub.GetBody())
+		if e != nil {
+			t.Fail()
+		}
 
-	// Empty "curve"
-	_, r := ImportPublicECDSA(Config, "some-name", "", pub.GetBody())
-	if r == nil {
-		t.Fatal(r)
-	}
+		AssertStructCorrectness(t, k1, "PublicKey", "secp384r1")
 
-	// Invalid curve
-	_, p := ImportPublicECDSA(Config, "some-name", "junk1024r1", pub.GetBody())
-	if p == nil {
-		t.Fatal(p)
-	}
+		if k1.Struct().Name != "secp384r1-name" {
+			t.Fail()
+		}
 
-	// Invalid pub
-	_, j := ImportPublicECDSA(Config, "some-name", "secp521r1", []byte("junk..."))
-	if j == nil {
-		t.Fatal(j)
-	}
+		if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp384r1" {
+			t.Fail()
+		}
 
-	// Valid key
-	k1, e := ImportPublicECDSA(Config, "secp521r1-name", "secp521r1", pub.GetBody())
-	if e != nil {
-		t.Fatal(e)
-	}
+		t.Logf("successfully imported [secp384r1-pubkey] [%s]", k1.FilePointer())
 
-	AssertStructCorrectness(t, k1, "PublicKey", "secp521r1")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
+			k1.FilePointer()))
+	})
 
-	if k1.Struct().Name != "secp521r1-name" {
-		t.Fatalf("k1.Struct().Name did not equal expected valud: %s", k1.Struct().Name)
-	}
+	t.Run("import:secp521r1", func(t *testing.T) {
+		t.Parallel()
 
-	if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp521r1" {
-		t.Fatal("invalid key type")
-	}
+		pub, err := helpers.NewFile("../../../data/keys/ecdsa/secp521r1-pubkey.pem")
+		if err != nil {
+			t.Fail()
+		}
 
-	t.Logf("successfully imported [secp521r1-pubkey] [%s]", k1.FilePointer())
+		k1, e := ImportPublicECDSA(Config, "secp521r1-name", "secp521r1", pub.GetBody())
+		if e != nil {
+			t.Fatal(e)
+		}
 
-	ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
-		k1.FilePointer()))
+		AssertStructCorrectness(t, k1, "PublicKey", "secp521r1")
+
+		if k1.Struct().Name != "secp521r1-name" {
+			t.Fatalf("k1.Struct().Name did not equal expected valud: %s", k1.Struct().Name)
+		}
+
+		if k1.Struct().KeyType != "ecdsa.PublicKey <==> secp521r1" {
+			t.Fatal("invalid key type")
+		}
+
+		t.Logf("successfully imported [secp521r1-pubkey] [%s]", k1.FilePointer())
+
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ecdsa/%s", Config.GetString("paths.keys"),
+			k1.FilePointer()))
+	})
 }
 
 func TestNewECDSA(t *testing.T) {

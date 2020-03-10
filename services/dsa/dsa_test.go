@@ -7,6 +7,7 @@ import (
 
 var Curves = []string{
 	"prime256v1",
+	// "secp224r1",
 	"secp384r1",
 	"secp521r1",
 }

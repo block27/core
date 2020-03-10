@@ -1,13 +1,9 @@
 package ec
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"os/user"
-	"runtime"
 
 	"github.com/amanelis/core-zero/config"
 	"github.com/amanelis/core-zero/helpers"
@@ -16,34 +12,35 @@ import (
 	"github.com/amanelis/core-zero/services/dsa/ecdsa/encodings"
 
 	"github.com/spacemonkeygo/openssl"
-	guuid "github.com/google/uuid"
+)
+
+var (
+	keyPath = "ec"
 )
 
 // KeyAPI main api for defining Key behavior and functions
 type KeyAPI interface {
 	GetAttributes() *dsa.KeyAttributes
-	FilePointer() string
-	KeyID() guuid.UUID
 	Struct() *key
-
-	getArtSignature() string
-	getPrivateKey() (openssl.PrivateKey, error)
-	getPublicKey() (openssl.PublicKey, error)
 
 	Sign([]byte) ([]byte, error)
 	Verify([]byte, []byte) bool
+
+	getPrivateKey() (openssl.PrivateKey, error)
+	getPublicKey() (openssl.PublicKey, error)
 }
 
 // key struct is the main type and placeholder for private keys on the system. These
-// should be persisted to a flat file database storage.
+// should be persisted to a flat file database storage
 type key struct {
-	Attributes *dsa.KeyAttributes
+	attributes *dsa.KeyAttributes
 
 	privateKeyPEM []byte
 	publicKeyPEM []byte
 }
 
-// NewEC ...
+// NewEC returns a new EC type keypair created using our rand.Reader, and using
+// the OpenSSL C bindings
 func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 	_, cv, ol, err := dsa.GetCurve(curve)
 	if err != nil {
@@ -67,7 +64,7 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 
 	// Create the key struct object
 	key := &key{
-		Attributes: &dsa.KeyAttributes{
+		attributes: &dsa.KeyAttributes{
 			GID: 						 dsa.GenerateUUID(),
 			Name:            name,
 			Slug:            helpers.NewHaikunator().Haikunate(),
@@ -92,7 +89,7 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 // GetEC fetches a system key that lives on the file system. Return useful
 // identification data aobut the key, likes its SHA256 and MD5 signatures
 func GetEC(c config.Reader, fp string) (KeyAPI, error) {
-	dirPath := fmt.Sprintf("%s/ec/%s", c.GetString("paths.keys"), fp)
+	dirPath := fmt.Sprintf("%s/%s/%s", c.GetString("paths.keys"), keyPath, fp)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return (*key)(nil), errors.NewKeyPathError("invalid key path")
 	}
@@ -114,7 +111,7 @@ func GetEC(c config.Reader, fp string) (KeyAPI, error) {
 	}
 
 	k := &key{
-		Attributes: obj,
+		attributes: obj,
 	}
 
 	keyPath := fmt.Sprintf("%s/key.pem", dirPath)
@@ -146,9 +143,62 @@ func GetEC(c config.Reader, fp string) (KeyAPI, error) {
 	return k, nil
 }
 
+// ImportPublicEC imports an existing ECDSA key into a KeyAPI object for
+// use in the Service API. Since you are importing a public Key, this will be
+// an incomplete Key object.
+func ImportPublicEC(c config.Reader, name string, curve string, public []byte) (KeyAPI, error) {
+	if name == "" {
+		return nil, fmt.Errorf("name cannot be empty")
+	}
+
+	if curve == "" {
+		return nil, fmt.Errorf("curve cannot be empty")
+	}
+
+	_, cv, _, err := dsa.GetCurve(curve)
+	if err != nil {
+		return nil, err
+	}
+
+	pub, err := openssl.LoadPublicKeyFromPEM(public)
+	if err != nil {
+		return nil, err
+	}
+
+	pem, perr := pub.MarshalPKIXPublicKeyPEM()
+	if perr != nil {
+		return nil, perr
+	}
+
+	// Resulting key will not be complete - create the key struct object anyways
+	key := &key{
+		attributes: &dsa.KeyAttributes{
+			GID: 						 dsa.GenerateUUID(),
+			Name:            name,
+			Slug:            helpers.NewHaikunator().Haikunate(),
+			KeyType:         dsa.ToString(cv, dsa.Public),
+			Status:          dsa.StatusActive,
+			FingerprintMD5:  encodings.BaseMD5(pem),
+			FingerprintSHA:  encodings.BaseSHA256(pem),
+			CreatedAt:       helpers.CreatedAtNow(),
+		},
+		publicKeyPEM:    pem,
+	}
+
+	// Write the entire key object to FS
+	if err := key.writeToFS(c); err != nil {
+		return nil, err
+	}
+
+	return key, nil
+}
+
+// writeToFS writes object serialized data and both keys to disk. Encryption for
+// keys should happen here
 func (k *key) writeToFS(c config.Reader) error {
 	// Create the keys root directory based on it's FilePointer method
-	dirPath := fmt.Sprintf("%s/ec/%s", c.GetString("paths.keys"), k.FilePointer())
+	dirPath := fmt.Sprintf("%s/%s/%s", c.GetString("paths.keys"), keyPath,
+		k.attributes.FilePointer())
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		os.Mkdir(dirPath, os.ModePerm)
 	}
@@ -162,7 +212,7 @@ func (k *key) writeToFS(c config.Reader) error {
 	defer objFile.Close()
 
 	// Marshall the objects
-	obj, err := dsa.KAToGOB64(k.Attributes)
+	obj, err := dsa.KAToGOB64(k.attributes)
 	if err != nil {
 		return err
 	}
@@ -198,18 +248,9 @@ func (k *key) writeToFS(c config.Reader) error {
 	return nil
 }
 
-// FilePointer ...
-func (k *key) FilePointer() string {
-	return k.Attributes.GID.String()
-}
-
+// GetAttributes ...
 func (k *key) GetAttributes() *dsa.KeyAttributes {
-	return k.Attributes
-}
-
-// KeyID ...
-func (k *key) KeyID() guuid.UUID {
-	return k.Attributes.GID
+	return k.attributes
 }
 
 // Struct ...
@@ -217,44 +258,7 @@ func (k *key) Struct() *key {
 	return k
 }
 
-func (k *key) getArtSignature() string {
-	usr, err := user.Current()
-	if err != nil {
-		return "--- path err ---"
-	}
-
-	var pyPath string
-
-	if runtime.GOOS == "darwin" {
-		pyPath = fmt.Sprintf("%s/.pyenv/shims/python", usr.HomeDir)
-	} else if runtime.GOOS == "linux" {
-		pyPath = "/usr/bin/python"
-	}
-
-	cmd := exec.Command(
-		pyPath,
-		"tmp/drunken_bishop.py",
-		"--mode",
-		"sha256",
-		k.GetAttributes().FingerprintSHA,
-	)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return "--- run err ---"
-	}
-
-	outStr, outErr := string(stdout.Bytes()), string(stderr.Bytes())
-	if outErr != "" {
-		return fmt.Sprintf("--- %s ---", outErr)
-	}
-
-	return outStr
-}
-
+// getPrivateKey ...
 func (k *key) getPrivateKey() (openssl.PrivateKey, error) {
 	key, err := openssl.LoadPrivateKeyFromPEM(k.privateKeyPEM)
 	if err != nil {
@@ -264,6 +268,7 @@ func (k *key) getPrivateKey() (openssl.PrivateKey, error) {
 	return key, nil
 }
 
+// getPublicKey ...
 func (k *key) getPublicKey() (openssl.PublicKey, error) {
 	key, err := openssl.LoadPublicKeyFromPEM(k.publicKeyPEM)
 	if err != nil {
@@ -273,10 +278,26 @@ func (k *key) getPublicKey() (openssl.PublicKey, error) {
 	return key, nil
 }
 
-func (k *key) Sign([]byte) ([]byte, error) {
-	return nil, nil
+// Sign uses the OpenSSL [SignPKCS1v15] method and returns a resulting signature
+func (k *key) Sign(data []byte) ([]byte, error) {
+	pk, err := k.getPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return pk.SignPKCS1v15(openssl.SHA256_Method, data)
 }
 
-func (k *key) Verify([]byte, []byte) bool {
-	return false
+// Verify checks the passed signature and returns a bool depending on verification
+func (k *key) Verify(data, sig []byte) bool {
+	pk, err := k.getPrivateKey()
+	if err != nil {
+		return false
+	}
+
+	if er := pk.VerifyPKCS1v15(openssl.SHA256_Method, data, sig); er != nil {
+		return false
+	}
+
+	return true
 }
