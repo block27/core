@@ -121,10 +121,10 @@ test_coverage_html:
 	@ENVIRONMENT=test go tool cover -html=coverage.out
 
 test_golang: prepare_tests
-	@ENVIRONMENT=test go test -v ./... -cover -coverprofile=coverage.out #-bench=.
+	@ENVIRONMENT=test go test -v ./... -cover -coverprofile=coverage.out -bench=.
 
 test_gotest: prepare_tests
-	@ENVIRONMENT=test gotest -v ./... -cover -coverprofile=coverage.out #-bench=.
+	@ENVIRONMENT=test gotest -v ./... -cover -coverprofile=coverage.out -bench=.
 
 test_richgo: prepare_tests
 	@ENVIRONMENT=test richgo test -v ./... -cover -coverprofile=coverage.out #-bench=.

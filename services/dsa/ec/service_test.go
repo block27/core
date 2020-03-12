@@ -39,31 +39,78 @@ func init() {
 		panic(err)
 	}
 
-	spew.Dump(k1)
-
 	Key = k1.Struct()
 	Config = c
 }
 
+//
+//
+//
+//
+//
+// TestNewEC tests simply that a NewEC can be created for each type of curve
 func TestNewEC(t *testing.T) {
-	// Invalid curve
-	_, q := NewEC(Config, "test-key-1", "prim56v1")
-	if q == nil {
-		t.Fatal("invalid curve")
-	}
+	t.Parallel()
 
-	// Valid
-	k, err := NewEC(Config, "test-key-1", "prime256v1")
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
 
-	AssertStructCorrectness(t, k, dsa.Private, "prime256v1")
-	CheckFullKeyFileObjects(t, Config, k, "NewEC")
-	ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
-		k.GetAttributes().FilePointer()))
+		_, q := NewEC(Config, "test-key-1", "prim56v1")
+		if q == nil {
+			t.Fatal("invalid curve")
+		}
+	})
+
+	t.Run("prime256v1", func(t *testing.T) {
+		t.Parallel()
+
+		k, err := NewEC(Config, "test-key-1", "prime256v1")
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		AssertStructCorrectness(t, k, dsa.Private, "prime256v1")
+		CheckFullKeyFileObjects(t, Config, k, "NewEC")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
+	})
+
+	t.Run("secp384r1", func(t *testing.T) {
+		t.Parallel()
+
+		k, err := NewEC(Config, "test-key-1", "secp384r1")
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		AssertStructCorrectness(t, k, dsa.Private, "secp384r1")
+		CheckFullKeyFileObjects(t, Config, k, "NewEC")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
+	})
+
+	t.Run("secp521r1", func(t *testing.T) {
+		t.Parallel()
+
+		k, err := NewEC(Config, "test-key-1", "secp521r1")
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		AssertStructCorrectness(t, k, dsa.Private, "secp521r1")
+		CheckFullKeyFileObjects(t, Config, k, "NewEC")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
+	})
 }
 
+//
+//
+//
+//
+//
+// TestGetEC tests that a key type can be created and then extracted from raw obj
+// files, imported into a struct and that it is in fact still valid
 func TestGetEC(t *testing.T) {
 	// Valid
 	k, err := GetEC(Config, Key.GetAttributes().FilePointer())
@@ -112,6 +159,13 @@ func TestGetEC(t *testing.T) {
 	CheckFullKeyFileObjects(t, Config, k, "NewEC")
 }
 
+//
+//
+//
+//
+//
+// TestGetPrivateKey checks that we can get a key, and that it's private key
+// does in fact equals the key value it actually represents.
 func TestGetPrivateKey(t *testing.T) {
 	// Test from New -------------------------------------------------------------
 	k1, err := NewEC(Config, "test-key-1", "prime256v1")
@@ -164,6 +218,13 @@ func TestGetPrivateKey(t *testing.T) {
 		k1.GetAttributes().FilePointer()))
 }
 
+//
+//
+//
+//
+//
+// TestGetPublicKey checks that we can get a key, and that it's public key
+// does in fact equals the key value it actually represents.
 func TestGetPublicKey(t *testing.T) {
 	// Test from New -------------------------------------------------------------
 	k1, err := NewEC(Config, "test-key-1", "prime256v1")
@@ -285,18 +346,32 @@ func BenchmarkSignSecp521r1(b *testing.B) {
 	})
 }
 
+//
+//
+//
+//
+//
+// TestSign redundant testing of a simple signature, next test will go into curve
+// type and more depth
 func TestSign(t *testing.T) {
 	if _, err := Key.Sign([]byte("the quick brown fox jumps over the lazy dog")); err != nil {
 		t.Fail()
 	}
 }
 
+//
+//
+//
+//
+//
+// TestSignEC ensures that we can generate signatures from each type of curve with
+// no possibility of error
 func TestSignEC(t *testing.T) {
 	t.Parallel()
 
 	data := []byte("the quick brown fox jumps over the lazy dog")
 
-	t.Run("sign/verify:prime256v1", func(t *testing.T) {
+	t.Run("sign:verify:prime256v1", func(t *testing.T) {
 		t.Parallel()
 
 		key, err := NewEC(Config, "sign/verify:test1", "prime256v1")
@@ -322,7 +397,7 @@ func TestSignEC(t *testing.T) {
 			key.GetAttributes().FilePointer()))
 	})
 
-	t.Run("sign/verify:secp384r1", func(t *testing.T) {
+	t.Run("sign:verify:secp384r1", func(t *testing.T) {
 		t.Parallel()
 
 		key, err := NewEC(Config, "sign/verify:test2", "secp384r1")
@@ -348,7 +423,7 @@ func TestSignEC(t *testing.T) {
 			key.GetAttributes().FilePointer()))
 	})
 
-	t.Run("sign/verify:secp521r1", func(t *testing.T) {
+	t.Run("sign:verify:secp521r1", func(t *testing.T) {
 		t.Parallel()
 
 		key, err := NewEC(Config, "sign/verify:test3", "secp521r1")
@@ -375,6 +450,12 @@ func TestSignEC(t *testing.T) {
 	})
 }
 
+//
+//
+//
+//
+//
+// TestImportPublicEC checks that each type of cure can be sucessfully imported
 func TestImportPublicEC(t *testing.T) {
 	t.Parallel()
 
@@ -392,6 +473,8 @@ func TestImportPublicEC(t *testing.T) {
 		}
 
 		AssertStructCorrectness(t, k, dsa.Public, "prime256v1")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
 	})
 
 	t.Run("import:secp384r1", func(t *testing.T) {
@@ -408,6 +491,8 @@ func TestImportPublicEC(t *testing.T) {
 		}
 
 		AssertStructCorrectness(t, k, dsa.Public, "secp384r1")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
 	})
 
 	t.Run("import:secp521r1", func(t *testing.T) {
@@ -424,5 +509,67 @@ func TestImportPublicEC(t *testing.T) {
 		}
 
 		AssertStructCorrectness(t, k, dsa.Public, "secp521r1")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
+	})
+}
+
+func TestVerifyExternalSignature(t *testing.T) {
+	t.Parallel()
+
+	fccn := func(curve, pubKeyF, signFile string) bool {
+		pub, err := helpers.NewFile(pubKeyF)
+		if err != nil {
+			t.Fail()
+		}
+
+		k, e := ImportPublicEC(Config, "ext", curve, pub.GetBody())
+		if e != nil {
+			t.Fatal(e)
+		}
+
+		sig, err := helpers.NewFile(signFile)
+		if err != nil {
+			t.Fail()
+		}
+
+		AssertStructCorrectness(t, k, dsa.Public, "prime256v1")
+		ClearSingleTestKey(t, fmt.Sprintf("%s/ec/%s", Config.GetString("paths.keys"),
+			k.GetAttributes().FilePointer()))
+
+		return k.Verify([]byte("hello"), sig.GetBody())
+	}
+
+	t.Run("prime256v1", func(t *testing.T) {
+		t.Parallel()
+
+		pubKeyFile := "../../../data/keys/ecdsa/prime256v1-pubkey.pem"
+		signatureF := "../../../data/signatures/ecdsa/prime256v1-sha256.der"
+
+		if !fccn("prime256v1", pubKeyFile, signatureF) {
+			t.Fail()
+		}
+	})
+
+	t.Run("secp384r1", func(t *testing.T) {
+		t.Parallel()
+
+		pubKeyFile := "../../../data/keys/ecdsa/secp384r1-pubkey.pem"
+		signatureF := "../../../data/signatures/ecdsa/secp384r1-sha256.der"
+
+		if !fccn("secp384r1", pubKeyFile, signatureF) {
+			t.Fail()
+		}
+	})
+
+	t.Run("secp521r1", func(t *testing.T) {
+		t.Parallel()
+
+		pubKeyFile := "../../../data/keys/ecdsa/secp521r1-pubkey.pem"
+		signatureF := "../../../data/signatures/ecdsa/secp521r1-sha256.der"
+
+		if !fccn("secp521r1", pubKeyFile, signatureF) {
+			t.Fail()
+		}
 	})
 }

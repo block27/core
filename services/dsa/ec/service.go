@@ -290,7 +290,7 @@ func (k *key) Sign(data []byte) ([]byte, error) {
 
 // Verify checks the passed signature and returns a bool depending on verification
 func (k *key) Verify(data, sig []byte) bool {
-	pk, err := k.getPrivateKey()
+	pk, err := k.getPublicKey()
 	if err != nil {
 		return false
 	}
