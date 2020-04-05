@@ -34,6 +34,9 @@ type KeyAttributes struct {
 	// Basically the elliptic curve size of the key
 	KeyType string
 
+	// Should be "public" or "private"
+	KeyUse string
+
 	FingerprintMD5 string // Real fingerprint in  MD5  (legacy)  of the key
 	FingerprintSHA string // Real fingerprint in  SHA256  of the key
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/amanelis/core-zero/config"
 	"github.com/amanelis/core-zero/helpers"
@@ -12,6 +13,8 @@ import (
 	"github.com/amanelis/core-zero/services/dsa/ecdsa/encodings"
 
 	"github.com/spacemonkeygo/openssl"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/text"
 )
 
 var (
@@ -69,6 +72,7 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 			Name:            name,
 			Slug:            helpers.NewHaikunator().Haikunate(),
 			KeyType:         dsa.ToString(cv, dsa.Private),
+			KeyUse: 				 dsa.ToString(cv, dsa.Private),
 			Status:          dsa.StatusActive,
 			FingerprintMD5:  encodings.BaseMD5(pubPemBytes),
 			FingerprintSHA:  encodings.BaseSHA256(pubPemBytes),
@@ -141,6 +145,33 @@ func GetEC(c config.Reader, fp string) (KeyAPI, error) {
 	k.publicKeyPEM = pubPemBytes
 
 	return k, nil
+}
+
+// ListEC returns a list of active keys stored on the local filesystem. Of
+// which are all encrypted via AES from the hardware block
+func ListEC(c config.Reader) ([]KeyAPI, error) {
+	files, err := ioutil.ReadDir(fmt.Sprintf("%s/ec", c.GetString("paths.keys")))
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Before(files[j].ModTime())
+	})
+
+	var keys []KeyAPI
+
+	for _, f := range files {
+		_key, _err := GetEC(c, f.Name())
+
+		if _err != nil {
+			continue
+		}
+
+		keys = append(keys, _key)
+	}
+
+	return keys, nil
 }
 
 // ImportPublicEC imports an existing ECDSA key into a KeyAPI object for
@@ -300,4 +331,72 @@ func (k *key) Verify(data, sig []byte) bool {
 	}
 
 	return true
+}
+
+
+// PrintKeysTW prints an elaborate way to display key information... not needed,
+// but nice for demos and visually displays the key randomArt via a python script
+func PrintKeysTW(keys []KeyAPI) {
+	stylePairs := [][]table.Style{
+		{table.StyleColoredBright},
+	}
+
+	for ndx, f := range keys {
+		tw := table.NewWriter()
+
+		tw.SetTitle(f.GetAttributes().FilePointer())
+		tw.AppendRows([]table.Row{
+			{
+				"Name",
+				f.GetAttributes().Name,
+			},
+			{
+				"Slug",
+				f.GetAttributes().Slug,
+			},
+			{
+				"Type",
+				helpers.RFgB(f.GetAttributes().KeyType),
+			},
+			{
+				"Created",
+				f.GetAttributes().CreatedAt,
+			},
+			{
+				"MD5",
+				f.GetAttributes().FingerprintMD5,
+			},
+			{
+				"SHA256",
+				f.GetAttributes().FingerprintSHA,
+			},
+			{
+				"SHA256 Visual",
+				f.GetAttributes().ArtSignature(),
+			},
+		})
+
+		twOuter := table.NewWriter()
+		tw.SetStyle(table.StyleColoredDark)
+		tw.Style().Title.Align = text.AlignCenter
+
+		for _, stylePair := range stylePairs {
+			row := make(table.Row, 1)
+			for idx := range stylePair {
+				row[idx] = tw.Render()
+			}
+			twOuter.AppendRow(row)
+		}
+
+		twOuter.SetStyle(table.StyleDouble)
+		twOuter.SetTitle(fmt.Sprintf("Asymmetric Key (%d)", ndx))
+		twOuter.Style().Options.SeparateRows = true
+
+		fmt.Println(twOuter.Render())
+	}
+}
+
+// PrintKeyTW takes an array of keys and runs them through prettyPrint function
+func PrintKeyTW(k *key) {
+	PrintKeysTW([]KeyAPI{k})
 }
