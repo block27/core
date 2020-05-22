@@ -11,7 +11,7 @@ import (
 	"os/user"
 	"runtime"
 
-	"github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core-zero/helpers"
 
 	guuid "github.com/google/uuid"
 )

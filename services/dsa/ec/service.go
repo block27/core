@@ -6,11 +6,11 @@ import (
 	"os"
 	"sort"
 
-	"github.com/amanelis/core-zero/config"
-	"github.com/amanelis/core-zero/helpers"
-	"github.com/amanelis/core-zero/services/dsa"
-	"github.com/amanelis/core-zero/services/dsa/errors"
-	"github.com/amanelis/core-zero/services/dsa/ecdsa/encodings"
+	"github.com/block27/core-zero/config"
+	"github.com/block27/core-zero/helpers"
+	"github.com/block27/core-zero/services/dsa"
+	"github.com/block27/core-zero/services/dsa/errors"
+	"github.com/block27/core-zero/services/dsa/ecdsa/encodings"
 
 	"github.com/spacemonkeygo/openssl"
 	"github.com/jedib0t/go-pretty/table"

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core-zero/helpers"
 )
 
 // MinimumEntropy is the minimum amount of entropy that will be considered safe.

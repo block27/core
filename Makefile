@@ -17,7 +17,7 @@ GO_TEST_DIRS := $(shell \
 	uniq)
 
 VERSION = `cat VERSION`
-PACKAGE = github.com/amanelis/core-zero
+PACKAGE = github.com/block27/core-zero
 
 # Aliases
 all: configuration build
