@@ -7,7 +7,7 @@ import (
 	"errors"
 
 	"github.com/awnumar/memguard"
-	"github.com/spacemonkeygo/openssl"
+	"github.com/block27/openssl"
 )
 
 type AESCredentials struct {

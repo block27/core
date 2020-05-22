@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/block27/core-zero/helpers"
-	"github.com/spacemonkeygo/openssl"
+	"github.com/block27/openssl"
 	guuid "github.com/google/uuid"
 )
 

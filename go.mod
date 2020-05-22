@@ -11,6 +11,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200131140622-c6473e3ed183 // indirect
 	github.com/awnumar/memguard v0.21.0
+	github.com/block27/openssl v1.0.1
 	github.com/briandowns/spinner v1.8.0
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btcutil v1.0.1
@@ -46,7 +47,6 @@ require (
 	github.com/rogpeppe/godef v1.1.1 // indirect
 	github.com/securego/gosec v0.0.0-20200106085552-9cb83e10afad // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/spacemonkeygo/openssl v0.0.0-20181017203307-c2dcc5cca94a
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v0.0.5
@@ -62,7 +62,6 @@ require (
 	github.com/zmb3/gogetdoc v0.0.0-20190228002656-b37376c5da6a // indirect
 	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	golang.org/x/tools v0.0.0-20200114012648-3b9e23528349 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/ini.v1 v1.51.1 // indirect

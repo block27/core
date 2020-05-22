@@ -12,7 +12,7 @@ import (
 	"github.com/block27/core-zero/services/dsa/errors"
 	"github.com/block27/core-zero/services/dsa/ecdsa/encodings"
 
-	"github.com/spacemonkeygo/openssl"
+	"github.com/block27/openssl"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 )
