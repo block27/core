@@ -11,7 +11,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200131140622-c6473e3ed183 // indirect
 	github.com/awnumar/memguard v0.21.0
-	github.com/block27/openssl v1.0.1
+	github.com/block27/openssl v1.0.2
 	github.com/briandowns/spinner v1.8.0
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btcutil v1.0.1

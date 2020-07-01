@@ -34,10 +34,6 @@ func dsaList(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	if len(keys) == 0 {
-		w.Write(nil)
-	}
-
 	jData, err := json.Marshal(keys)
 	if err != nil {
 		panic(err)

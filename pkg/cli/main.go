@@ -1,9 +1,9 @@
 package main
 
 import (
+	m "github.com/awnumar/memguard"
 	"github.com/block27/core-zero/backend"
 	c "github.com/block27/core-zero/cmd"
-	m "github.com/awnumar/memguard"
 )
 
 func main() {

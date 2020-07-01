@@ -45,7 +45,7 @@ var (
 func init() {
 	// Create flags ...
 	dsaCreateCmd.Flags().StringVarP(&createName, "name", "n", "", "name required")
-	dsaCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "default: prime256v1")
+	dsaCreateCmd.Flags().StringVarP(&createCurve, "curve", "c", "prime256v1", "")
 	dsaCreateCmd.MarkFlagRequired("name")
 
 	// Get flags ...
@@ -287,9 +287,9 @@ var dsaExportPubCmd = &cobra.Command{
 		}
 
 		pubKey, err := base64.StdEncoding.DecodeString(key.Struct().PublicKeyB64)
-    if err != nil {
-      panic(err)
-    }
+		if err != nil {
+			panic(err)
+		}
 
 		fmt.Println(string(pubKey))
 	},

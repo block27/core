@@ -1,11 +1,13 @@
 package backend
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"runtime"
+
 	// "strconv"
 	"strings"
 	"time"
@@ -16,9 +18,9 @@ import (
 	"github.com/block27/core-zero/services/bbolt"
 	"github.com/block27/core-zero/services/serial"
 
-	"github.com/google/gousb"
 	"github.com/awnumar/memguard"
 	"github.com/briandowns/spinner"
+	"github.com/google/gousb"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,9 +38,9 @@ type Backend struct {
 
 // device - capture data in from connected AES/Arduino usbmodem
 type device struct {
-	Product uint16 `json:"product"`
-	Vendor 	uint16 `json:"vendor"`
-	Serial 	string `json:"serial"`
+	Product      uint16 `json:"product"`
+	Vendor       uint16 `json:"vendor"`
+	Serial       string `json:"serial"`
 	Manufacturer string `json:"manufacturer"`
 }
 
@@ -77,7 +79,7 @@ func NewBackend() (*Backend, error) {
 // work, if removed or altered, HSM  code will  not run. But key recovery is
 // still possible.
 func (b *Backend) HardwareAuthenticate() error {
-	spinners, err := newSpinner(3)
+	spinners, err := newSpinner(1)
 	if err != nil {
 		return err
 	}
@@ -90,6 +92,8 @@ func (b *Backend) HardwareAuthenticate() error {
 
 	var extB1, extB2 string
 
+	// Grab the locaiton of the PIN 1 and 2. Depending on Architecture, this could
+	// differ, but not hugely.
 	if runtime.GOOS == "darwin" {
 		extB1 = fmt.Sprintf("%s/%s", "/Volumes/BASE1", config.ExtBase1Path)
 		extB2 = fmt.Sprintf("%s/%s", "/Volumes/BASE2", config.ExtBase2Path)
@@ -129,9 +133,11 @@ func (b *Backend) HardwareAuthenticate() error {
 		for i := 0; i < len(spinners); i++ {
 			spinners[i].Stop()
 		}
+
 		return err
 	}
 
+	// Hardware stored, on SBC two values that should equal to the values on the USB devices
 	hmK, _ := h.ReadFile(config.HostMasterKeyPath)
 	hmI, _ := h.ReadFile(config.HostMasterIvPath)
 
@@ -185,20 +191,20 @@ func (b *Backend) HardwareAuthenticate() error {
 	)
 
 	// Read ext1
-	b1F, _ := h.ReadFile(extB1)
-	p1F, _ := h.ReadFile(config.HostPin1)
+	b1F, _ := h.ReadFileByte(extB1)
+	p1F, _ := h.ReadFileByte(config.HostPin1)
 
-	dec1, _ := c.Decrypt([]byte(b1F))
-	if string(dec1) != p1F {
+	dec1, _ := c.Decrypt(b1F)
+	if subtle.ConstantTimeCompare(dec1, p1F) == 0 {
 		return fmt.Errorf("%s", h.RFgB("pin1 does not match, invalid ext authentication"))
 	}
 
 	// Read ext2
-	b2F, _ := h.ReadFile(extB2)
-	p2F, _ := h.ReadFile(config.HostPin2)
+	b2F, _ := h.ReadFileByte(extB2)
+	p2F, _ := h.ReadFileByte(config.HostPin2)
 
-	dec2, _ := c.Decrypt([]byte(b2F))
-	if string(dec2) != p2F {
+	dec2, _ := c.Decrypt(b2F)
+	if subtle.ConstantTimeCompare(dec2, p2F) == 0 {
 		return fmt.Errorf("%s", h.RFgB("pin2 does not match, invalid ext authentication"))
 	}
 
@@ -207,14 +213,9 @@ func (b *Backend) HardwareAuthenticate() error {
 
 // locateDevice ... temporary fix, but need to  find the AES device to  starts
 func (b *Backend) locateDevice() (string, error) {
-	data, err := ioutil.ReadDir("/dev")
-	if err != nil {
-		return "", err
-	}
-
 	// Run device identification process
 	// Open our jsonFile
-	f, err := h.NewFile("/var/data/device")
+	f, err := h.NewFile("/var/data/device.teensy")
 	if err != nil {
 		return "", err
 	}
@@ -224,7 +225,7 @@ func (b *Backend) locateDevice() (string, error) {
 	// Unmarshall data into struct var
 	jerr := json.Unmarshal([]byte(string(f.GetBody())), &d)
 	if jerr != nil {
-		return "", fmt.Errorf(h.RFgB("invalid device mapping file"))
+		return "", fmt.Errorf(h.RFgB("invalid device mapping file"), jerr)
 	}
 
 	ctx := gousb.NewContext()
@@ -241,6 +242,11 @@ func (b *Backend) locateDevice() (string, error) {
 
 	if m != d.Manufacturer || s != d.Serial {
 		return "", fmt.Errorf(h.RFgB("device manufacturer and serial did not match"))
+	}
+
+	data, err := ioutil.ReadDir("/dev")
+	if err != nil {
+		return "", err
 	}
 
 	for _, f := range data {

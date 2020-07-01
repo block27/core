@@ -153,6 +153,16 @@ func ReadFile(filename string) (string, error) {
 	return string(b), nil
 }
 
+// ReadFileByte ...
+func ReadFileByte(filename string) ([]byte, error) {
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
 // ReadBinary ...
 func ReadBinary(filename string) ([]byte, error) {
 	file, err := os.Open(filename)

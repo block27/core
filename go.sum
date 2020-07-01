@@ -65,8 +65,8 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver v3.6.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/block27/openssl v1.0.1 h1:YubQV1hD6XXRut5APvIEBwEZ7u/XlI555evp2NexVLo=
-github.com/block27/openssl v1.0.1/go.mod h1:JQwNIMPBFtkiKyGbz53COeFy7A1epCNFhR0lY1A2xMs=
+github.com/block27/openssl v1.0.2 h1:b3Cv6J4ObtOsrXYRqVZr5dm8e+kCGBZUSzJFqESGXMs=
+github.com/block27/openssl v1.0.2/go.mod h1:JQwNIMPBFtkiKyGbz53COeFy7A1epCNFhR0lY1A2xMs=
 github.com/bombsimon/wsl/v2 v2.0.0 h1:+Vjcn+/T5lSrO8Bjzhk4v14Un/2UyCA1E3V5j9nwTkQ=
 github.com/bombsimon/wsl/v2 v2.0.0/go.mod h1:mf25kr/SqFEPhhcxW1+7pxzGlW+hIl/hYTKY95VwV8U=
 github.com/briandowns/spinner v1.8.0 h1:SeidJ8ASAayR4Wxl5Of54LHqgi8s6sBvAHg4kxKxia4=

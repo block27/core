@@ -9,8 +9,8 @@ import (
 	"github.com/block27/core-zero/config"
 	"github.com/block27/core-zero/helpers"
 	"github.com/block27/core-zero/services/dsa"
-	"github.com/block27/core-zero/services/dsa/errors"
 	"github.com/block27/core-zero/services/dsa/ecdsa/encodings"
+	"github.com/block27/core-zero/services/dsa/errors"
 
 	"github.com/block27/openssl"
 	"github.com/jedib0t/go-pretty/table"
@@ -39,7 +39,7 @@ type key struct {
 	attributes *dsa.KeyAttributes
 
 	privateKeyPEM []byte
-	publicKeyPEM []byte
+	publicKeyPEM  []byte
 }
 
 // NewEC returns a new EC type keypair created using our rand.Reader, and using
@@ -68,18 +68,18 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 	// Create the key struct object
 	key := &key{
 		attributes: &dsa.KeyAttributes{
-			GID: 						 dsa.GenerateUUID(),
-			Name:            name,
-			Slug:            helpers.NewHaikunator().Haikunate(),
-			KeyType:         dsa.ToString(cv, dsa.Private),
-			KeyUse: 				 dsa.ToString(cv, dsa.Private),
-			Status:          dsa.StatusActive,
-			FingerprintMD5:  encodings.BaseMD5(pubPemBytes),
-			FingerprintSHA:  encodings.BaseSHA256(pubPemBytes),
-			CreatedAt:       helpers.CreatedAtNow(),
+			GID:            dsa.GenerateUUID(),
+			Name:           name,
+			Slug:           helpers.NewHaikunator().Haikunate(),
+			KeyType:        dsa.ToString(cv, dsa.Private),
+			KeyUse:         dsa.ToString(cv, dsa.Private),
+			Status:         dsa.StatusActive,
+			FingerprintMD5: encodings.BaseMD5(pubPemBytes),
+			FingerprintSHA: encodings.BaseSHA256(pubPemBytes),
+			CreatedAt:      helpers.CreatedAtNow(),
 		},
-		privateKeyPEM: 	 priPemBytes,
-		publicKeyPEM:    pubPemBytes,
+		privateKeyPEM: priPemBytes,
+		publicKeyPEM:  pubPemBytes,
 	}
 
 	// Write the entire key object to FS
@@ -204,16 +204,16 @@ func ImportPublicEC(c config.Reader, name string, curve string, public []byte) (
 	// Resulting key will not be complete - create the key struct object anyways
 	key := &key{
 		attributes: &dsa.KeyAttributes{
-			GID: 						 dsa.GenerateUUID(),
-			Name:            name,
-			Slug:            helpers.NewHaikunator().Haikunate(),
-			KeyType:         dsa.ToString(cv, dsa.Public),
-			Status:          dsa.StatusActive,
-			FingerprintMD5:  encodings.BaseMD5(pem),
-			FingerprintSHA:  encodings.BaseSHA256(pem),
-			CreatedAt:       helpers.CreatedAtNow(),
+			GID:            dsa.GenerateUUID(),
+			Name:           name,
+			Slug:           helpers.NewHaikunator().Haikunate(),
+			KeyType:        dsa.ToString(cv, dsa.Public),
+			Status:         dsa.StatusActive,
+			FingerprintMD5: encodings.BaseMD5(pem),
+			FingerprintSHA: encodings.BaseSHA256(pem),
+			CreatedAt:      helpers.CreatedAtNow(),
 		},
-		publicKeyPEM:    pem,
+		publicKeyPEM: pem,
 	}
 
 	// Write the entire key object to FS
@@ -332,7 +332,6 @@ func (k *key) Verify(data, sig []byte) bool {
 
 	return true
 }
-
 
 // PrintKeysTW prints an elaborate way to display key information... not needed,
 // but nice for demos and visually displays the key randomArt via a python script
