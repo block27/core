@@ -28,15 +28,15 @@ type file struct {
 	Body []byte
 	Path string
 
-	MD5  [16]byte
-	SHA256  [32]byte
-	SHA1 [20]byte
+	MD5    [16]byte
+	SHA256 [32]byte
+	SHA1   [20]byte
 }
 
 // NewFile returns a new object of File interface
-func NewFile(path string) (File, error)  {
+func NewFile(path string) (File, error) {
 	if !FileExists(path) {
-		return nil, fmt.Errorf("%s", RFgB("invalid or missing file"))
+		return nil, fmt.Errorf("%s %s", RFgB("invalid or missing file: "), path)
 	}
 
 	//  Create our new instance of file
@@ -99,7 +99,6 @@ func (f *file) readBinary(filename string) ([]byte, error) {
 
 	return bytes, nil
 }
-
 
 // FileExists ...
 func FileExists(name string) bool {
