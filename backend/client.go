@@ -234,8 +234,11 @@ func (b *Backend) locateDevice() (string, error) {
 		return "", fmt.Errorf(h.RFgB("invalid device mapping file"))
 	}
 
+	fmt.Println("JSON: ", string(f.GetBody()))
+
 	ctx := gousb.NewContext()
 	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+		fmt.Printf("\n")
 		fmt.Printf("desc.Product: %s\n", desc.Product)
 		fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
 		fmt.Printf("gousb.ID(d.Product): %s\n", gousb.ID(d.Product))
