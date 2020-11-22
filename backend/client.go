@@ -239,6 +239,8 @@ func (b *Backend) locateDevice() (string, error) {
 	ctx := gousb.NewContext()
 	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
 		fmt.Printf("\n")
+		fmt.Println(desc.String())
+		fmt.Printf("desc.Port: %d\n", desc.Port)
 		fmt.Printf("desc.Product: %s\n", desc.Product)
 		fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
 		fmt.Printf("gousb.ID(d.Product): %s\n", gousb.ID(d.Product))
