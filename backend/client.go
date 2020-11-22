@@ -240,6 +240,9 @@ func (b *Backend) locateDevice() (string, error) {
 	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
 		fmt.Printf("\n")
 		fmt.Println(desc.String())
+		fmt.Printf("desc.Spec: %s\n", gousb.BCD(desc.Spec))
+		fmt.Printf("desc.Device: %s\n", gousb.BCD(desc.Device))
+
 		fmt.Printf("desc.Port: %d\n", desc.Port)
 		fmt.Printf("desc.Product: %s\n", desc.Product)
 		fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
