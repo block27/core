@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"runtime"
+
 	// "strconv"
 	"strings"
 	"time"
@@ -16,9 +17,9 @@ import (
 	"github.com/amanelis/core-zero/services/bbolt"
 	"github.com/amanelis/core-zero/services/serial"
 
-	"github.com/google/gousb"
 	"github.com/awnumar/memguard"
 	"github.com/briandowns/spinner"
+	"github.com/google/gousb"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,9 +37,9 @@ type Backend struct {
 
 // device - capture data in from connected AES/Arduino usbmodem
 type device struct {
-	Product uint16 `json:"product"`
-	Vendor 	uint16 `json:"vendor"`
-	Serial 	string `json:"serial"`
+	Product      uint16 `json:"product"`
+	Vendor       uint16 `json:"vendor"`
+	Serial       string `json:"serial"`
 	Manufacturer string `json:"manufacturer"`
 }
 
@@ -206,9 +207,9 @@ func (b *Backend) HardwareAuthenticate() error {
 }
 
 func findMPD26(product, vendor uint16) func(desc *gousb.DeviceDesc) bool {
-  return func(desc *gousb.DeviceDesc) bool {
-    return desc.Product == gousb.ID(product) && desc.Vendor == gousb.ID(vendor)
-  }
+	return func(desc *gousb.DeviceDesc) bool {
+		return desc.Product == gousb.ID(product) && desc.Vendor == gousb.ID(vendor)
+	}
 }
 
 // locateDevice ... temporary fix, but need to  find the AES device to  starts
@@ -235,6 +236,11 @@ func (b *Backend) locateDevice() (string, error) {
 
 	ctx := gousb.NewContext()
 	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+		fmt.Printf("desc.Product: %s\n", desc.Product)
+		fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
+		fmt.Printf("gousb.ID(d.Product): %s\n", gousb.ID(d.Product))
+		fmt.Printf("gousb.ID(d.Vendor): %s\n", gousb.ID(d.Vendor))
+
 		return desc.Product == gousb.ID(d.Product) && desc.Vendor == gousb.ID(d.Vendor)
 	})
 
