@@ -1,14 +1,12 @@
 package backend
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"runtime"
 
 	// "strconv"
-	"strings"
+
 	"time"
 
 	"github.com/amanelis/core-zero/config"
@@ -214,73 +212,75 @@ func findMPD26(product, vendor uint16) func(desc *gousb.DeviceDesc) bool {
 
 // locateDevice ... temporary fix, but need to  find the AES device to  starts
 func (b *Backend) locateDevice() (string, error) {
-	data, err := ioutil.ReadDir("/dev")
-	if err != nil {
-		return "", err
-	}
+	return fmt.Sprintf("/dev/%s", "ttyACM0"), nil
 
-	// Run device identification process
-	// Open our jsonFile
-	f, err := h.NewFile("/var/data/device")
-	if err != nil {
-		return "", err
-	}
+	// data, err := ioutil.ReadDir("/dev")
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	var d device
+	// // Run device identification process
+	// // Open our jsonFile
+	// f, err := h.NewFile("/var/data/device")
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	// Unmarshall data into struct var
-	jerr := json.Unmarshal([]byte(string(f.GetBody())), &d)
-	if jerr != nil {
-		return "", fmt.Errorf(h.RFgB("invalid device mapping file"))
-	}
+	// var d device
 
-	fmt.Println("JSON: ", string(f.GetBody()))
+	// // Unmarshall data into struct var
+	// jerr := json.Unmarshal([]byte(string(f.GetBody())), &d)
+	// if jerr != nil {
+	// 	return "", fmt.Errorf(h.RFgB("invalid device mapping file"))
+	// }
 
-	ctx := gousb.NewContext()
-	devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
-		fmt.Printf("\n")
-		fmt.Println(desc.String())
-		fmt.Printf("desc.Spec: %s\n", gousb.BCD(desc.Spec))
-		fmt.Printf("desc.Device: %s\n", gousb.BCD(desc.Device))
+	// fmt.Println("JSON: ", string(f.GetBody()))
 
-		fmt.Printf("desc.Port: %d\n", desc.Port)
-		fmt.Printf("desc.Product: %s\n", desc.Product)
-		fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
-		fmt.Printf("gousb.ID(d.Product): %s\n", gousb.ID(d.Product))
-		fmt.Printf("gousb.ID(d.Vendor): %s\n", gousb.ID(d.Vendor))
+	// ctx := gousb.NewContext()
+	// devices, _ := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+	// 	fmt.Printf("\n")
+	// 	fmt.Println(desc.String())
+	// 	fmt.Printf("desc.Spec: %s\n", gousb.BCD(desc.Spec))
+	// 	fmt.Printf("desc.Device: %s\n", gousb.BCD(desc.Device))
 
-		return desc.Product == gousb.ID(d.Product) && desc.Vendor == gousb.ID(d.Vendor)
-	})
+	// 	fmt.Printf("desc.Port: %d\n", desc.Port)
+	// 	fmt.Printf("desc.Product: %s\n", desc.Product)
+	// 	fmt.Printf("desc.Vendor: %s\n", desc.Vendor)
+	// 	fmt.Printf("gousb.ID(d.Product): %s\n", gousb.ID(d.Product))
+	// 	fmt.Printf("gousb.ID(d.Vendor): %s\n", gousb.ID(d.Vendor))
 
-	if len(devices) == 0 {
-		return "", fmt.Errorf(h.RFgB("invalid authentication device"))
-	}
+	// 	return desc.Product == gousb.ID(d.Product) && desc.Vendor == gousb.ID(d.Vendor)
+	// })
 
-	m, _ := devices[0].Manufacturer()
-	s, _ := devices[0].SerialNumber()
+	// if len(devices) == 0 {
+	// 	return "", fmt.Errorf(h.RFgB("invalid authentication device"))
+	// }
 
-	if m != d.Manufacturer || s != d.Serial {
-		return "", fmt.Errorf(h.RFgB("device manufacturer and serial did not match"))
-	}
+	// m, _ := devices[0].Manufacturer()
+	// s, _ := devices[0].SerialNumber()
 
-	for _, f := range data {
-		// MacOSX
-		if strings.Contains(f.Name(), "tty.usbmodem") {
-			return fmt.Sprintf("/dev/%s", f.Name()), nil
-		}
+	// if m != d.Manufacturer || s != d.Serial {
+	// 	return "", fmt.Errorf(h.RFgB("device manufacturer and serial did not match"))
+	// }
 
-		// linux based OS
-		if strings.Contains(f.Name(), "ttyACM0") {
-			return fmt.Sprintf("/dev/%s", f.Name()), nil
-		}
+	// for _, f := range data {
+	// 	// MacOSX
+	// 	if strings.Contains(f.Name(), "tty.usbmodem") {
+	// 		return fmt.Sprintf("/dev/%s", f.Name()), nil
+	// 	}
 
-		// arm based OS
-		if strings.Contains(f.Name(), "ttyS1") {
-			return fmt.Sprintf("/dev/%s", f.Name()), nil
-		}
-	}
+	// 	// linux based OS
+	// 	if strings.Contains(f.Name(), "ttyACM0") {
+	// 		return fmt.Sprintf("/dev/%s", f.Name()), nil
+	// 	}
 
-	return "", nil
+	// 	// arm based OS
+	// 	if strings.Contains(f.Name(), "ttyS1") {
+	// 		return fmt.Sprintf("/dev/%s", f.Name()), nil
+	// 	}
+	// }
+
+	// return "", nil
 }
 
 // requestHardwareKeys ...
