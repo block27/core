@@ -1,4 +1,4 @@
-# Sigma HSM
+# Block27 HSM
 This source repository contains the code used for creating, signing and encrypting keys and data through the "pseudo" HSM module authored by Alex Manelis. 
 
 ## General
