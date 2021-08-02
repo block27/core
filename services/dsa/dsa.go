@@ -4,9 +4,9 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	"github.com/amanelis/core-zero/helpers"
-	"github.com/spacemonkeygo/openssl"
+	"github.com/block27/core/helpers"
 	guuid "github.com/google/uuid"
+	"github.com/spacemonkeygo/openssl"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 )
 
 // EC ...
-type EC struct { }
+type EC struct{}
 
 // GetCurve checks the string param matched and should return a valid ec curve
 func GetCurve(curve string) (elliptic.Curve, string, openssl.EllipticCurve, error) {

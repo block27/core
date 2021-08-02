@@ -3,7 +3,7 @@ package encodings
 import (
 	"testing"
 
-	"github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core/helpers"
 )
 
 // A keypair for NIST P-256 / secp256r1

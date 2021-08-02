@@ -12,11 +12,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/amanelis/core-zero/config"
-	"github.com/amanelis/core-zero/helpers"
-	"github.com/amanelis/core-zero/test"
+	"github.com/block27/core/config"
+	"github.com/block27/core/helpers"
+	"github.com/block27/core/test"
 
-	enc "github.com/amanelis/core-zero/services/dsa/ecdsa/encodings"
+	enc "github.com/block27/core/services/dsa/ecdsa/encodings"
 )
 
 var Config config.Reader

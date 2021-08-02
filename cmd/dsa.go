@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	h "github.com/amanelis/core-zero/helpers"
-	"github.com/amanelis/core-zero/services/dsa/ecdsa"
-	"github.com/amanelis/core-zero/services/dsa/signature"
+	h "github.com/block27/core/helpers"
+	"github.com/block27/core/services/dsa/ecdsa"
+	"github.com/block27/core/services/dsa/signature"
 )
 
 var (
@@ -287,9 +287,9 @@ var dsaExportPubCmd = &cobra.Command{
 		}
 
 		pubKey, err := base64.StdEncoding.DecodeString(key.Struct().PublicKeyB64)
-    if err != nil {
-      panic(err)
-    }
+		if err != nil {
+			panic(err)
+		}
 
 		fmt.Println(string(pubKey))
 	},

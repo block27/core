@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/amanelis/core-zero/config"
-	"github.com/amanelis/core-zero/helpers"
-	"github.com/amanelis/core-zero/services/dsa"
-	"github.com/amanelis/core-zero/services/dsa/ecdsa/encodings"
+	"github.com/block27/core/config"
+	"github.com/block27/core/helpers"
+	"github.com/block27/core/services/dsa"
+	"github.com/block27/core/services/dsa/ecdsa/encodings"
 
-	"github.com/spacemonkeygo/openssl"
 	guuid "github.com/google/uuid"
+	"github.com/spacemonkeygo/openssl"
 )
 
 // KeyAPI main api for defining Key behavior and functions
@@ -94,21 +94,20 @@ func NewEC(c config.Reader, name string, curve string) (KeyAPI, error) {
 		return nil, err
 	}
 
-
 	// Create the key struct object
 	key := &key{
-		GID:             dsa.GenerateUUID(),
-		Name:            name,
-		Slug:            helpers.NewHaikunator().Haikunate(),
-		KeyType:         typ,
-		Status:          dsa.StatusActive,
-		FingerprintMD5:  encodings.BaseMD5(pubPem),
-		FingerprintSHA:  encodings.BaseSHA256(pubPem),
-		CreatedAt:       time.Now(),
-		PrivateKeyDER: 	 priDer,
-		PrivateKeyPEM: 	 priPem,
-		PublicKeyDER:    pubDer,
-		PublicKeyPEM:    pubPem,
+		GID:            dsa.GenerateUUID(),
+		Name:           name,
+		Slug:           helpers.NewHaikunator().Haikunate(),
+		KeyType:        typ,
+		Status:         dsa.StatusActive,
+		FingerprintMD5: encodings.BaseMD5(pubPem),
+		FingerprintSHA: encodings.BaseSHA256(pubPem),
+		CreatedAt:      time.Now(),
+		PrivateKeyDER:  priDer,
+		PrivateKeyPEM:  priPem,
+		PublicKeyDER:   pubDer,
+		PublicKeyPEM:   pubPem,
 	}
 
 	// Write the entire key object to FS

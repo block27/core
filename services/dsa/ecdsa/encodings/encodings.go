@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/amanelis/core-zero/crypto"
+	"github.com/block27/core/crypto"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -20,10 +20,10 @@ var (
 	ECPrivateKey = "EC PRIVATE KEY"
 
 	// ECPublicKey ...
-	ECPublicKey  = "EC PUBLIC KEY"
+	ECPublicKey = "EC PUBLIC KEY"
 
 	// SDPublicKey ...
-	SDPublicKey  = "PUBLIC KEY"
+	SDPublicKey = "PUBLIC KEY"
 )
 
 // ImportPublicKeyfromPEM ...
@@ -152,7 +152,6 @@ func FingerprintSHA256(publicKey *ecdsa.PublicKey) string {
 	return base64.RawStdEncoding.EncodeToString(sha256sum[:])
 }
 
-
 // EncodePublic ...
 func EncodePublic(publicKey *ecdsa.PublicKey) (string, error) {
 	x509EncodedPub, e := x509.MarshalPKIXPublicKey(publicKey)
@@ -161,7 +160,7 @@ func EncodePublic(publicKey *ecdsa.PublicKey) (string, error) {
 	}
 
 	pemEncodedPub := pem.EncodeToMemory(&pem.Block{
-		Type: SDPublicKey,
+		Type:  SDPublicKey,
 		Bytes: x509EncodedPub,
 	})
 
@@ -176,7 +175,7 @@ func EncodePrivate(privateKey *ecdsa.PrivateKey) (string, error) {
 	}
 
 	pemEncoded := pem.EncodeToMemory(&pem.Block{
-		Type: ECPrivateKey,
+		Type:  ECPrivateKey,
 		Bytes: x509Encoded,
 	})
 
@@ -199,7 +198,7 @@ func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
 	}
 
 	pemEncoded := pem.EncodeToMemory(&pem.Block{
-		Type: ECPrivateKey,
+		Type:  ECPrivateKey,
 		Bytes: x509Encoded,
 	})
 
@@ -209,7 +208,7 @@ func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
 	}
 
 	pemEncodedPub := pem.EncodeToMemory(&pem.Block{
-		Type: SDPublicKey,
+		Type:  SDPublicKey,
 		Bytes: x509EncodedPub,
 	})
 

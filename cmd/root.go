@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/amanelis/core-zero/backend"
-	h "github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core/backend"
+	h "github.com/block27/core/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ var (
 	B *backend.Backend
 
 	rootCmd = &cobra.Command{
-		Use: "cli",
+		Use:   "cli",
 		Short: fmt.Sprintf("%s: ECDSA/RSA key generation, signing, AES encrypt/decrypt, and secure backup", h.GFgB("Sigma CLI")),
 		Run: func(cmd *cobra.Command, args []string) {
 			B.Welcome()

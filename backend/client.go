@@ -9,11 +9,11 @@ import (
 
 	"time"
 
-	"github.com/amanelis/core-zero/config"
-	"github.com/amanelis/core-zero/crypto"
-	h "github.com/amanelis/core-zero/helpers"
-	"github.com/amanelis/core-zero/services/bbolt"
-	"github.com/amanelis/core-zero/services/serial"
+	"github.com/block27/core/config"
+	"github.com/block27/core/crypto"
+	h "github.com/block27/core/helpers"
+	"github.com/block27/core/services/bbolt"
+	"github.com/block27/core/services/serial"
 
 	"github.com/awnumar/memguard"
 	"github.com/briandowns/spinner"

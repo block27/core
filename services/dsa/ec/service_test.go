@@ -3,11 +3,12 @@ package ec
 import (
 	"fmt"
 	"os"
+
 	// "reflect"
 	"testing"
 
-	"github.com/amanelis/core-zero/config"
-	// "github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core/config"
+	// "github.com/block27/core/helpers"
 )
 
 var Config config.Reader
@@ -50,12 +51,10 @@ func TestNewEC(t *testing.T) {
 		t.Fail()
 	}
 
-
 	fmt.Println(k)
 
 	// if !reflect.DeepEqual(k, obj) {
 	// 	t.Fatalf("structs don't equal?")
 	// }
-
 
 }

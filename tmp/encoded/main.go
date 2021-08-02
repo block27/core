@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/amanelis/core-zero/helpers"
+	"github.com/block27/core/helpers"
 )
 
 func main() {
