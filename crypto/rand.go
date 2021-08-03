@@ -42,35 +42,12 @@ type devReader struct {
 // Read - base read implementation for the reader. We here set our own rand
 // device based on the init/os above.
 //
-func (r *devReader) ReadDevice(b []byte, d string) (n int, err error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.f == nil {
-		f, err := os.Open(d)
-		if f == nil {
-			return 0, err
-		}
-
-		if runtime.GOOS == "plan9" {
-			r.f = f
-		} else {
-			r.f = bufio.NewReader(hideAgainReader{f})
-		}
-	}
-
-	return r.f.Read(b)
-}
-
-// Read - base read implementation for the reader. We here set our own rand
-// device based on the init/os above.
-//
 func (r *devReader) Read(b []byte) (n int, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.f == nil {
-		f, err := os.Open(r.name)
+		f, err := os.Open("/dev/TrueRNG")
 		if f == nil {
 			return 0, err
 		}
