@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -47,7 +48,15 @@ func (r *devReader) Read(b []byte) (n int, err error) {
 	defer r.mu.Unlock()
 
 	if r.f == nil {
-		f, err := os.Open("/dev/TrueRNG")
+		d := os.Getenv("RNG_DEVICE_PATH")
+
+		if d == "" {
+			d = "/dev/urandom"
+		}
+
+		fmt.Printf("block27/core/crypto/reader using [%s]\n", d)
+
+		f, err := os.Open(d)
 		if f == nil {
 			return 0, err
 		}
