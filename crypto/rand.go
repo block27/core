@@ -43,6 +43,10 @@ type hideAgainReader struct {
 
 var isEAGAIN func(error) bool
 
+func (r *devReader) GetName() string {
+	return r.name
+}
+
 func (r *devReader) ReadHardware(b []byte, d string) (n int, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
